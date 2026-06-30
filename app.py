@@ -354,10 +354,10 @@ with tab0:
           </div>
           <div style="font-family:'Cormorant Garamond',serif;font-size:26px;
                color:#ffe9a8;line-height:1.3;margin-top:6px">
-            {reading['headline']}
+            {reading.get('headline', '')}
           </div>
           <div style="margin-top:10px;color:#d9ccff;font-size:15px;line-height:1.5">
-            {reading['headline_extra']}
+            {reading.get('headline_extra', '')}
           </div>
         </div>
         """,

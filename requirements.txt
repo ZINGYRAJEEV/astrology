@@ -1,4 +1,4 @@
-pyswisseph==2.10.3.2
+pyswisseph>=2.10.3.2
 streamlit>=1.30
 pytz>=2023.3
 reportlab>=4.0

@@ -17,6 +17,8 @@ from .strength_calc import all_strengths
 from .interpret import (
     synthesize, analyse_all_houses, recommend_remedies, plain_language_reading,
 )
+from .ashtakavarga import compute_sav
+from . import wisdom
 
 
 def build_markdown(chart: Chart, intent: str = "General reading") -> str:
@@ -76,6 +78,18 @@ def build_markdown(chart: Chart, intent: str = "General reading") -> str:
         )
     lines.append("")
 
+    sav = compute_sav(chart)
+    lines.append("## Sarvashtakavarga (Math of Opportunity)")
+    lines.append(f"_Total {sav['total']} bindus, average {sav['average']:.0f} per house. "
+                 "30+ auspicious, 25-30 stable, below 25 challenging._")
+    lines.append("")
+    lines.append("| House | Sign | Bindus | Strength |")
+    lines.append("|---|---|---|---|")
+    for h in range(1, 13):
+        ph = sav["per_house"][h]
+        lines.append(f"| {h} ({ref.HOUSE_NAME[h]}) | {ph['sign']} | {ph['points']} | {ph['class']} |")
+    lines.append("")
+
     lines.append("## House-by-House Analysis")
     for h in range(1, 13):
         r = houses[h]
@@ -86,6 +100,7 @@ def build_markdown(chart: Chart, intent: str = "General reading") -> str:
             lines.append(f"- Occupants: {', '.join(r.occupants)}")
         if r.aspecting:
             lines.append(f"- Aspected by: {', '.join(r.aspecting)}")
+        lines.append(f"- Ashtakavarga: {r.sav_points} bindus ({r.sav_class})")
         lines.append("")
 
     lines.append("## Remedial Measures (Upaye)")
@@ -100,6 +115,16 @@ def build_markdown(chart: Chart, intent: str = "General reading") -> str:
         lines.append(f"- Mantra: {rec['mantra']}")
         lines.append(f"- Charity: {rec['charity']}")
         lines.append("")
+
+    wr = wisdom.witness_reading(chart)
+    lines.append("## The Witness (Ashtavakra Gita)")
+    lines.append(f"_{wr['intro']}_")
+    lines.append("")
+    for refl in wr["reflections"]:
+        lines.append(f"- {refl}")
+    lines.append("")
+    lines.append(f"> {wr['closing']}")
+    lines.append("")
 
     lines.append("---")
     lines.append(
@@ -166,6 +191,24 @@ def build_pdf(chart: Chart, intent: str = "General reading") -> bytes:
     flow.append(tbl)
     flow.append(Spacer(1, 10))
 
+    # Sarvashtakavarga table.
+    sav = compute_sav(chart)
+    flow.append(Paragraph("Sarvashtakavarga (Math of Opportunity)", h2))
+    sdata = [["House", "Sign", "Bindus", "Strength"]]
+    for h in range(1, 13):
+        ph = sav["per_house"][h]
+        sdata.append([f"{h} {ref.HOUSE_NAME[h]}", ph["sign"], str(ph["points"]), ph["class"]])
+    stbl = Table(sdata, repeatRows=1)
+    stbl.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#5b3a8a")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f2eef8")]),
+    ]))
+    flow.append(stbl)
+    flow.append(Spacer(1, 10))
+
     flow.append(Paragraph("House-by-House Analysis", h2))
     for h in range(1, 13):
         r = houses[h]
@@ -174,7 +217,8 @@ def build_pdf(chart: Chart, intent: str = "General reading") -> bytes:
         flow.append(Paragraph(
             f"<i>{r.signification}</i> Lord {r.lord} ({r.lord_dignity}) in house {r.lord_house}."
             + (f" Occupants: {', '.join(r.occupants)}." if r.occupants else "")
-            + (f" Aspected by: {', '.join(r.aspecting)}." if r.aspecting else ""), body))
+            + (f" Aspected by: {', '.join(r.aspecting)}." if r.aspecting else "")
+            + f" Ashtakavarga: {r.sav_points} bindus ({r.sav_class}).", body))
         flow.append(Spacer(1, 3))
 
     flow.append(Spacer(1, 6))
@@ -187,6 +231,18 @@ def build_pdf(chart: Chart, intent: str = "General reading") -> bytes:
             f"Gemstone: {rec['gemstone']}. Mantra: {rec['mantra']}. Charity: {rec['charity']}.",
             body))
         flow.append(Spacer(1, 3))
+
+    # Witness (Ashtavakra) reflection.
+    wr = wisdom.witness_reading(chart)
+    flow.append(Spacer(1, 8))
+    flow.append(Paragraph("The Witness (Ashtavakra Gita)", h2))
+    flow.append(Paragraph(f"<i>{wr['intro']}</i>", body))
+    flow.append(Spacer(1, 4))
+    for refl in wr["reflections"]:
+        flow.append(Paragraph(refl, body))
+        flow.append(Spacer(1, 3))
+    flow.append(Spacer(1, 4))
+    flow.append(Paragraph(f"<b>{wr['closing']}</b>", h2))
 
     doc.build(flow)
     return buf.getvalue()

@@ -27,6 +27,21 @@ APIs, no network dependency for the core calculations.
 Interpretation logic (functional benefic/malefic, house-by-house judging,
 repeating-pattern detection, remedies) lives in `astro/interpret.py`.
 
+Additional layers:
+
+- **Sarvashtakavarga** (`astro/ashtakavarga.py`) — the classical bindu
+  point system (337 total, ~28 average per house) used to gauge the "muscle"
+  of each house (30+ auspicious / 25–30 stable / below 25 challenging). It is
+  woven into the house verdicts, the plain-language "peak area" insight, and
+  the report.
+- **The Witness** (`astro/wisdom.py`) — a contemplative Advaita Vedanta layer
+  inspired by the Ashtavakra Gita: each Navagraha is shown both as an actor in
+  the dream (Maya) and from the perspective of the Drashta (the Witness), with
+  core verses and the soul's Aries→Pisces journey. The chart is a map to be
+  used and then transcended.
+- Dignity scoring also honours **Moolatrikona** degree-ranges and reports each
+  planet's **Naisargika Bala** (natural strength in virupas).
+
 ## Setup
 
 ```bash

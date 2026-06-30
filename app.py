@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime, date, time
 
+import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -27,6 +28,8 @@ from astro.interpret import (
     analyse_all_houses, repeating_patterns, functional_nature,
     recommend_remedies, synthesize, plain_language_reading, INTENT_HOUSES,
 )
+from astro.ashtakavarga import compute_sav
+from astro import wisdom
 from astro.report import build_markdown, build_pdf
 from astro import persistence
 
@@ -332,9 +335,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-tab0, tab1, tab2, tab3, tab4 = st.tabs([
+tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "\U0001f4d6 Your Reading", "Phase 1 - Chart", "Phase 2 - Evaluation",
-    "Phase 3 - Synthesis", "Timing & Transits",
+    "Phase 3 - Synthesis", "Timing & Transits", "\U0001fab7 Witness",
 ])
 
 # ===========================================================================
@@ -472,12 +475,41 @@ with tab2:
             "Planet": nm,
             "Dignity": s.dignity,
             "Strength %": s.percent,
+            "Natural (virupas)": s.naisargika or "\u2014",
             "House": p.house,
             "Functional": nature[nm]["nature"] + (" (Yogakaraka)" if nature[nm]["yogakaraka"] else ""),
             "Vargottama": "Yes" if s.vargottama else "",
             "Notes": s.notes,
         })
     st.dataframe(prows, hide_index=True, use_container_width=True)
+
+    # --- Ashtakavarga (Sarvashtakavarga) ---------------------------------
+    st.markdown("### Sarvashtakavarga - the Math of Opportunity")
+    sav = compute_sav(chart)
+    st.caption(
+        f"Total {sav['total']} bindus across 12 houses (average "
+        f"{sav['average']:.0f}). 30+ = highly auspicious \u00b7 25-30 = stable \u00b7 "
+        f"below 25 = challenging."
+    )
+    sav_rows = []
+    for h in range(1, 13):
+        ph = sav["per_house"][h]
+        sav_rows.append({
+            "House": h,
+            "Name": ref.HOUSE_NAME[h],
+            "Sign": ph["sign"],
+            "Bindus": ph["points"],
+            "Strength": ph["class"],
+        })
+    cc1, cc2 = st.columns([3, 2])
+    with cc1:
+        chart_df = pd.DataFrame(
+            {"Bindus": [sav["per_house"][h]["points"] for h in range(1, 13)]},
+            index=[f"H{h}" for h in range(1, 13)],
+        )
+        st.bar_chart(chart_df, height=240, color="#f5c542")
+    with cc2:
+        st.dataframe(sav_rows, hide_index=True, use_container_width=True, height=240)
 
     st.markdown("### Steps 8-9 - House-by-House Judging")
     reports = analyse_all_houses(chart)
@@ -492,7 +524,8 @@ with tab2:
             st.markdown(
                 f"**Lord:** {r.lord} ({r.lord_dignity}, {r.lord_strength}%) in house {r.lord_house}  \n"
                 f"**Occupants:** {occ_txt}  \n"
-                f"**Aspected by:** {asp_txt}"
+                f"**Aspected by:** {asp_txt}  \n"
+                f"**Ashtakavarga:** {r.sav_points} bindus ({r.sav_class})"
             )
             st.markdown(
                 f"**Verdict:** <span class='verdict-{r.verdict}'>{r.verdict}</span>",
@@ -614,6 +647,69 @@ with tab4:
             f"Not currently in Sade Sati. Saturn transits {ss['saturn_sign']}; "
             f"natal Moon in {ss['moon_sign']}."
         )
+
+# ===========================================================================
+# WITNESS - Jyotish meets the Ashtavakra Gita (Advaita Vedanta)
+# ===========================================================================
+with tab5:
+    wr = wisdom.witness_reading(chart)
+    st.markdown(
+        f"""
+        <div class="card" style="border-color:rgba(184,155,255,0.4)">
+          <div class="subtle" style="letter-spacing:3px;text-transform:uppercase">
+            The Witness &middot; Drashta
+          </div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:22px;
+               color:#d9ccff;line-height:1.4;margin-top:6px">{wr['intro']}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("#### Reflections from your chart")
+    for refl in wr["reflections"]:
+        st.markdown(f"<div class='card'>{refl}</div>", unsafe_allow_html=True)
+
+    st.markdown("#### The Navagrahas as actors in the play")
+    st.caption("Each planet's role in the dream (Maya) and the Witness's view of the same.")
+    wcols = st.columns(3)
+    for i, nm in enumerate(ref.PLANETS):
+        w = wr["planets"][nm]
+        with wcols[i % 3]:
+            st.markdown(
+                f"""
+                <div class="card" style="min-height:200px">
+                  <b style="color:#ffe9a8;font-size:16px">{nm}
+                    <span class="subtle">({ref.PLANET_SANSKRIT[nm]})</span></b>
+                  <div class="subtle" style="margin:6px 0">{w['metaphysical']}</div>
+                  <div><b>Dream:</b> {w['dream']}</div>
+                  <div style="margin-top:4px"><b>Witness:</b> {w['witness']}</div>
+                  <div style="margin-top:8px;color:#b89bff;font-style:italic">
+                    &ldquo;{w['verse']}&rdquo;</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("#### The journey from Aries to Pisces")
+    for stage, desc in wr["journey"]:
+        st.markdown(
+            f"<div class='card'><b style='color:#ffe9a8'>{stage}</b><br>{desc}</div>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        f"""
+        <div style="text-align:center;margin:30px 0 10px 0">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:30px;
+               background:linear-gradient(120deg,#fff,#b89bff);
+               -webkit-background-clip:text;-webkit-text-fill-color:transparent">
+            {wr['closing']}
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 st.markdown(
     "<p class='subtle' style='text-align:center;margin-top:24px'>"

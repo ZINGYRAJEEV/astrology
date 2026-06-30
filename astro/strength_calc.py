@@ -34,6 +34,7 @@ class PlanetStrength:
     vargottama: bool        # same sign in D-1 and D-9
     retrograde: bool
     is_benefic: bool        # natural benefic
+    naisargika: float = 0.0  # natural strength in virupas
     notes: str = ""
 
     @property
@@ -41,12 +42,20 @@ class PlanetStrength:
         return round(self.score * 100)
 
 
-def _dignity_of(planet: str, sign: str) -> str:
-    """Classify a planet's dignity in a given sign."""
+def _dignity_of(planet: str, sign: str, degree: float = None) -> str:
+    """Classify a planet's dignity in a given sign.
+
+    If ``degree`` (0-30 within the sign) is provided, the Moolatrikona
+    degree-range is honoured (it ranks just below exaltation).
+    """
     if planet in ref.EXALTATION and ref.EXALTATION[planet][0] == sign:
         return "Exalted"
     if planet in ref.DEBILITATION and ref.DEBILITATION[planet][0] == sign:
         return "Debilitated"
+    if planet in ref.MOOLATRIKONA and degree is not None:
+        mt_sign, mt_lo, mt_hi = ref.MOOLATRIKONA[planet]
+        if sign == mt_sign and mt_lo <= degree < mt_hi:
+            return "Moolatrikona"
     if sign in ref.OWN_SIGNS.get(planet, set()):
         return "Own Sign"
 
@@ -60,7 +69,7 @@ def _dignity_of(planet: str, sign: str) -> str:
 
 def planet_strength(chart: Chart, planet: str) -> PlanetStrength:
     p: PlanetPosition = chart.planets[planet]
-    dignity = _dignity_of(planet, p.sign)
+    dignity = _dignity_of(planet, p.sign, p.degree_in_sign)
     vargottama = p.sign_index == p.navamsha_sign_index
 
     notes = []
@@ -84,6 +93,7 @@ def planet_strength(chart: Chart, planet: str) -> PlanetStrength:
         vargottama=vargottama,
         retrograde=p.retrograde,
         is_benefic=planet in ref.NATURAL_BENEFICS,
+        naisargika=ref.NAISARGIKA_VIRUPAS.get(planet, 0.0),
         notes=" ".join(notes),
     )
 

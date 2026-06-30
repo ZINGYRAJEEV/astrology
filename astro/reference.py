@@ -190,6 +190,26 @@ DEBILITATION = {
     "Rahu": ("Scorpio", 20), "Ketu": ("Taurus", 20),
 }
 
+# Moolatrikona: a planet's most comfortable degree-range within a sign
+# (sign, start_deg, end_deg). Ranks between exaltation and own sign.
+MOOLATRIKONA = {
+    "Sun": ("Leo", 0, 20),
+    "Moon": ("Taurus", 3, 30),
+    "Mars": ("Aries", 0, 12),
+    "Mercury": ("Virgo", 15, 20),
+    "Jupiter": ("Sagittarius", 0, 10),
+    "Venus": ("Libra", 0, 15),
+    "Saturn": ("Aquarius", 0, 20),
+}
+
+# Naisargika Bala (natural/intrinsic strength) in virupas - a fixed ranking
+# of the seven planets independent of the chart (Sun strongest .. Saturn
+# weakest). Used as a tie-breaker / context figure.
+NAISARGIKA_VIRUPAS = {
+    "Sun": 60.00, "Moon": 51.43, "Venus": 42.85, "Jupiter": 34.28,
+    "Mercury": 25.70, "Mars": 17.14, "Saturn": 8.57,
+}
+
 # Own signs (rulership). Sun and Moon own one sign each; the rest own two.
 OWN_SIGNS = {
     "Sun": {"Leo"},

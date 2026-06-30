@@ -95,9 +95,13 @@ class HouseReport:
     aspecting: List[str]
     signals: List[str]
     verdict: str         # "Supported" / "Mixed" / "Challenged"
+    sav_points: int = 0  # Sarvashtakavarga bindus in this house
+    sav_class: str = ""  # "Highly auspicious" / "Stable" / "Challenging"
 
 
-def analyse_house(chart: Chart, house: int, strengths: Dict[str, PlanetStrength]) -> HouseReport:
+def analyse_house(chart: Chart, house: int, strengths: Dict[str, PlanetStrength],
+                  sav: Dict = None) -> HouseReport:
+    from .ashtakavarga import compute_sav, classify
     sign = chart.house_signs[house]
     lord = ref.SIGN_LORD[sign]
     lord_pos = chart.planets[lord]
@@ -105,8 +109,21 @@ def analyse_house(chart: Chart, house: int, strengths: Dict[str, PlanetStrength]
     occupants = chart.occupants(house)
     aspecting = [a["planet"] for a in aspects_on_house(chart, house)]
 
+    if sav is None:
+        sav = compute_sav(chart)
+    sav_points = sav["per_house"][house]["points"]
+    sav_class = classify(sav_points)
+
     signals: List[str] = []
     pos, neg = 0, 0
+
+    # 0) Ashtakavarga 'muscle' of the house.
+    if sav_points >= 30:
+        signals.append(f"Strong Ashtakavarga ({sav_points} bindus) - themes manifest readily.")
+        pos += 1
+    elif sav_points < 25:
+        signals.append(f"Low Ashtakavarga ({sav_points} bindus) - results come with more effort.")
+        neg += 1
 
     # 1) Lord's dignity.
     if lord_strength.dignity in ("Exalted", "Own Sign", "Moolatrikona"):
@@ -165,12 +182,16 @@ def analyse_house(chart: Chart, house: int, strengths: Dict[str, PlanetStrength]
         aspecting=aspecting,
         signals=signals,
         verdict=verdict,
+        sav_points=sav_points,
+        sav_class=sav_class,
     )
 
 
 def analyse_all_houses(chart: Chart) -> Dict[int, HouseReport]:
+    from .ashtakavarga import compute_sav
     strengths = all_strengths(chart)
-    return {h: analyse_house(chart, h, strengths) for h in range(1, 13)}
+    sav = compute_sav(chart)
+    return {h: analyse_house(chart, h, strengths, sav) for h in range(1, 13)}
 
 
 # ---------------------------------------------------------------------------
@@ -429,8 +450,11 @@ def plain_language_reading(chart: Chart, intent: str = "General reading") -> Dic
     """
     from .dasha_calc import compute_vimshottari, current_dasha
 
+    from .ashtakavarga import compute_sav
+
     strengths = all_strengths(chart)
     reports = analyse_all_houses(chart)
+    sav = compute_sav(chart)
     info = INTENT_PLAIN.get(intent, INTENT_PLAIN["General reading"])
     emphasis = INTENT_HOUSES.get(intent, INTENT_HOUSES["General reading"])
 
@@ -499,6 +523,8 @@ def plain_language_reading(chart: Chart, intent: str = "General reading") -> Dic
             "meaning": meaning,
             "explanation": why,
             "advice": advice,
+            "sav_points": r.sav_points,
+            "sav_class": r.sav_class,
         })
 
     # ---- current life period (dasha) in plain words ---------------------
@@ -531,6 +557,16 @@ def plain_language_reading(chart: Chart, intent: str = "General reading") -> Dic
         )
     actions.append(info["good"] if n_good >= n_bad else info["work"])
 
+    # Ashtakavarga 'peak' - where your energy flows with least resistance.
+    peak_house = max(range(1, 13), key=lambda h: sav["per_house"][h]["points"])
+    peak = sav["per_house"][peak_house]
+    peak_note = (
+        f"Your strongest area by Ashtakavarga points is House {peak_house} "
+        f"({ref.HOUSE_THEME[peak_house]}) with {peak['points']} of a possible average 28 "
+        f"\u2014 this is where life tends to flow most easily for you."
+    )
+    actions.append(peak_note)
+
     return {
         "intent": intent,
         "title": info["title"],
@@ -541,4 +577,6 @@ def plain_language_reading(chart: Chart, intent: str = "General reading") -> Dic
         "key_areas": key_areas,
         "timing": timing,
         "actions": actions,
+        "peak_house": peak_house,
+        "peak_points": peak["points"],
     }

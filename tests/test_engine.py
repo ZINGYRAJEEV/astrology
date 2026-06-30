@@ -88,10 +88,47 @@ def test_functional_and_synthesis():
     print("Synthesis paragraphs:", len(syn["paragraphs"]))
 
 
+def test_ashtakavarga():
+    from astro.ashtakavarga import compute_sav, BAV_PLANETS, BENEFIC_PLACES
+    # Each planet's benefic-place table sums to its classical total.
+    expected = {"Sun": 48, "Moon": 49, "Mars": 39, "Mercury": 54,
+                "Jupiter": 56, "Venus": 52, "Saturn": 39}
+    for p in BAV_PLANETS:
+        total = sum(len(v) for v in BENEFIC_PLACES[p].values())
+        assert total == expected[p], f"{p} table sums to {total}, expected {expected[p]}"
+    c = compute_chart(GANDHI)
+    sav = compute_sav(c)
+    assert sav["total"] == 337, f"SAV total {sav['total']} != 337"
+    assert sav["bav_totals"] == expected
+    # Each house has a sane bindu count.
+    for h in range(1, 13):
+        assert 0 <= sav["per_house"][h]["points"] <= 56
+    print("SAV total:", sav["total"], "avg:", round(sav["average"], 1))
+
+
+def test_moolatrikona_and_naisargika():
+    # Sun in early Leo -> Moolatrikona; Sun deep in Leo (>20) -> Own Sign.
+    assert _dignity_of("Sun", "Leo", 10) == "Moolatrikona"
+    assert _dignity_of("Sun", "Leo", 25) == "Own Sign"
+    assert ref.NAISARGIKA_VIRUPAS["Sun"] == 60.00
+
+
+def test_witness_reading():
+    from astro.wisdom import witness_reading, PLANET_WITNESS
+    c = compute_chart(GANDHI)
+    wr = witness_reading(c)
+    assert wr["reflections"]
+    assert set(PLANET_WITNESS.keys()) == set(ref.PLANETS)
+    print("Witness reflections:", len(wr["reflections"]))
+
+
 if __name__ == "__main__":
     test_chart_basic()
     test_dignity_logic()
     test_aspects()
     test_vimshottari()
     test_functional_and_synthesis()
+    test_ashtakavarga()
+    test_moolatrikona_and_naisargika()
+    test_witness_reading()
     print("\nAll tests passed.")

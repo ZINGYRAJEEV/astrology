@@ -1,4 +1,8 @@
-pyswisseph>=2.10.3.2
+# pysweph is the actively maintained fork of pyswisseph: identical
+# `import swisseph` API, but with prebuilt wheels for Python 3.11-3.13
+# (the original pyswisseph has no wheels past 3.11, which breaks cloud
+# deploys). The code also runs unchanged on the original pyswisseph.
+pysweph>=2.10.3.6
 streamlit>=1.30
 pytz>=2023.3
 reportlab>=4.0

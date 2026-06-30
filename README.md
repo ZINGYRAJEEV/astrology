@@ -66,6 +66,10 @@ python tests/test_engine.py
 
 - Uses the built-in Moshier ephemeris model (arc-second accuracy, no data
   files needed).
+- The Swiss Ephemeris binding is [`pysweph`](https://pypi.org/project/pysweph/),
+  the maintained fork of `pyswisseph` (same `import swisseph` API) which ships
+  wheels for current Python versions. The code also runs on the original
+  `pyswisseph` if you prefer.
 - Rahu is the **Mean Node**; Ketu is exactly opposite.
 - This tool is for education and self-reflection, in the spirit of Jyotish
   as a lamp for insight — not deterministic fate.

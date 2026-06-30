@@ -131,7 +131,7 @@ def sade_sati_status(chart: Chart, when: Optional[datetime] = None) -> dict:
     ut = when  # treat as UT for a coarse transit check
     jd = swe.julday(ut.year, ut.month, ut.day,
                     ut.hour + ut.minute / 60.0)
-    xx, _ = swe.calc_ut(jd, swe.SATURN, swe.FLG_MOSEPH | swe.FLG_SIDEREAL)
+    xx = swe.calc_ut(jd, swe.SATURN, swe.FLG_MOSEPH | swe.FLG_SIDEREAL)[0]
     sat_sign = int(xx[0] // 30) % 12
 
     moon_sign = chart.planets["Moon"].sign_index

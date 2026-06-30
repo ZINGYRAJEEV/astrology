@@ -147,9 +147,13 @@ def compute_chart(birth: BirthData) -> Chart:
     ayanamsha = swe.get_ayanamsa_ut(jd_ut)
 
     # Ascendant via Placidus cusps in sidereal mode; ascmc[0] = Ascendant.
-    cusps, ascmc = swe.houses_ex(
+    # Index by position so we work with both ``pyswisseph`` (returns
+    # (cusps, ascmc)) and the ``pysweph`` fork (which may append an error
+    # string). ``ascmc[0]`` is the Ascendant in either case.
+    houses_result = swe.houses_ex(
         jd_ut, birth.latitude, birth.longitude, b"P", swe.FLG_SIDEREAL
     )
+    ascmc = houses_result[1]
     asc_long = _norm360(ascmc[0])
     lagna_idx = _sign_index(asc_long)
     nav_lagna_idx = _navamsha_sign_index(asc_long)
@@ -176,7 +180,9 @@ def compute_chart(birth: BirthData) -> Chart:
             lon = _norm360(rahu.longitude + 180.0)
             speed = -1.0  # nodes are always retrograde
         else:
-            xx, _ = swe.calc_ut(jd_ut, _SWE_ID[name], _FLAGS)
+            # ``[0]`` = position tuple; later return items (retflags / error
+            # string) differ between pyswisseph and the pysweph fork.
+            xx = swe.calc_ut(jd_ut, _SWE_ID[name], _FLAGS)[0]
             lon = _norm360(xx[0])
             speed = xx[3]
 

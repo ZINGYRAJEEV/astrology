@@ -567,11 +567,26 @@ def plain_language_reading(chart: Chart, intent: str = "General reading") -> Dic
     )
     actions.append(peak_note)
 
+    # ---- enrich the headline with the peak + the Witness verse ----------
+    from .wisdom import PLANET_WITNESS
+    verse = None
+    headline_extra = (
+        f"Life flows most easily through your {ref.HOUSE_THEME[peak_house]} "
+        f"(House {peak_house}, {peak['points']} Ashtakavarga points)."
+    )
+    if maha:
+        verse = PLANET_WITNESS[maha.lord]["verse"]
+        headline_extra += (
+            f" You are in a {maha.lord} period \u2014 in the Witness's words, "
+            f"\u201c{verse}\u201d"
+        )
+
     return {
         "intent": intent,
         "title": info["title"],
         "intro": info["intro"],
         "headline": headline,
+        "headline_extra": headline_extra,
         "tone": tone,
         "overview": overview,
         "key_areas": key_areas,
@@ -579,4 +594,6 @@ def plain_language_reading(chart: Chart, intent: str = "General reading") -> Dic
         "actions": actions,
         "peak_house": peak_house,
         "peak_points": peak["points"],
+        "current_lord": maha.lord if maha else None,
+        "verse": verse,
     }

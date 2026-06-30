@@ -47,6 +47,8 @@ def build_markdown(chart: Chart, intent: str = "General reading") -> str:
     lines.append(f"## Your Reading - {reading['title']} (in plain language)")
     lines.append(f"**{reading['headline']}**")
     lines.append("")
+    lines.append(f"_{reading['headline_extra']}_")
+    lines.append("")
     lines.append(reading["overview"])
     lines.append("")
     for a in reading["key_areas"]:

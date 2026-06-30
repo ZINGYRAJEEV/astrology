@@ -356,6 +356,9 @@ with tab0:
                color:#ffe9a8;line-height:1.3;margin-top:6px">
             {reading['headline']}
           </div>
+          <div style="margin-top:10px;color:#d9ccff;font-size:15px;line-height:1.5">
+            {reading['headline_extra']}
+          </div>
         </div>
         """,
         unsafe_allow_html=True,

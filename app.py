@@ -31,6 +31,7 @@ from astro.interpret import (
 from astro.ashtakavarga import compute_sav
 from astro import wisdom
 from astro.report import build_markdown, build_pdf
+from astro.prediction import generate_prediction, prediction_markdown
 from astro import persistence
 
 st.set_page_config(page_title="Jyotish Darshan", page_icon="\u2728", layout="wide")
@@ -335,10 +336,86 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "\U0001f4d6 Your Reading", "Phase 1 - Chart", "Phase 2 - Evaluation",
-    "Phase 3 - Synthesis", "Timing & Transits", "\U0001fab7 Witness",
+tab_pred, tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "\U0001f52e Predictions", "\U0001f4d6 Your Reading", "Phase 1 - Chart",
+    "Phase 2 - Evaluation", "Phase 3 - Synthesis", "Timing & Transits", "\U0001fab7 Witness",
 ])
+
+# ===========================================================================
+# PREDICTIONS - chart + Panchang at birth (name, date, time, place)
+# ===========================================================================
+with tab_pred:
+    pred = generate_prediction(chart, intent)
+    pc = pred["panchang_at_birth"]
+
+    st.markdown(
+        f"""
+        <div class="card" style="border-color:rgba(245,197,66,0.35)">
+          <div class="subtle" style="letter-spacing:3px;text-transform:uppercase">
+            Personal prediction &middot; {pred['focus_intent']}
+          </div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:22px;
+               color:#ffe9a8;line-height:1.4;margin-top:6px">{pred['opening'][:280]}...</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("#### Birth Panchang (at your birth time)")
+    pp1, pp2, pp3, pp4, pp5 = st.columns(5)
+    for col, label, val in zip(
+        [pp1, pp2, pp3, pp4, pp5],
+        ["Vaara", "Tithi", "Nakshatra", "Yoga", "Karana"],
+        [pc["vaara"], pc["tithi"],
+         f"{pc['nakshatra']} (pada {pc['nakshatra_pada']})", pc["yoga"], pc["karana"]],
+    ):
+        col.markdown(f"**{label}**  \n{val}")
+
+    st.markdown("#### Life predictions")
+    for lp in pred["life_predictions"]:
+        chip = {"Supported": "#6fcf97", "Mixed": "#f2c94c", "Challenged": "#ef6b6b"}[lp["verdict"]]
+        st.markdown(
+            f"""
+            <div class="card">
+              <span class="pill" style="background:{chip};color:#0b0e1a;border:none">{lp['verdict']}</span>
+              <b style="font-size:17px;color:#fff;display:block;margin-top:8px">{lp['area']}</b>
+              <div style="margin-top:6px">{lp['prediction']}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("#### Year ahead (Dasha timing)")
+    t = pred["timing"]
+    st.markdown(
+        f"<div class='card'>"
+        f"Current period: <b>{t['current_maha'] or '—'}</b> Mahadasha"
+        + (f" / {t['current_antar']} Antardasha" if t.get('current_antar') else "")
+        + f"<br>{t['year_ahead']}<br><span class='subtle'>Sade Sati: {t['sade_sati']}</span></div>",
+        unsafe_allow_html=True,
+    )
+
+    if pred["cautions"]:
+        st.markdown("#### Cautions")
+        for c in pred["cautions"]:
+            st.markdown(f"<div class='card' style='border-color:rgba(239,107,107,0.3)'>{c}</div>",
+                        unsafe_allow_html=True)
+
+    lk = pred["lucky"]
+    st.markdown(
+        f"<div class='card'><b>Favourable:</b> weekday {lk['day']}, "
+        f"star {lk['nakshatra']} (lord {lk['nakshatra_lord']}), "
+        f"gemstone hint {lk['gemstone_hint']}</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.download_button(
+        "Download full prediction (Markdown)",
+        prediction_markdown(pred),
+        file_name=f"prediction_{(pred['name'] or 'chart').replace(' ', '_')}.md",
+        mime="text/markdown",
+    )
+    st.caption("For remedies and technical chart details, see Phase 3 and Evaluation tabs.")
 
 # ===========================================================================
 # YOUR READING - plain-language, intent-focused (beginner friendly)

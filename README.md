@@ -24,6 +24,7 @@ APIs, no network dependency for the core calculations.
 | 8. Viewer | `astro/viewer.py` | SVG chart wheel/grid with hover tooltips |
 | 9. Persistence | `astro/persistence.py` | SQLite save / load / compare charts |
 | 10. Panchang | `astro/panchang.py`, `pages/1_Panchang.py` | Daily ऋषिकेश पंचांग (Tithi, Nakshatra, Yoga, Karana, muhurtas, Choghadiya) |
+| 11. Prediction | `astro/prediction.py`, `pages/2_Prediction.py` | Personal predictions from name + birth date/time/place + Panchang at birth |
 
 Interpretation logic (functional benefic/malefic, house-by-house judging,
 repeating-pattern detection, remedies) lives in `astro/interpret.py`.

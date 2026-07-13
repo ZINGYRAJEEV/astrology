@@ -26,6 +26,8 @@ CITIES: Dict[str, tuple] = {
     "Varanasi, India": (25.3176, 82.9739, "Asia/Kolkata"),
     "Lucknow, India": (26.8467, 80.9462, "Asia/Kolkata"),
     "Patna, India": (25.5941, 85.1376, "Asia/Kolkata"),
+    "Rishikesh, India": (30.0869, 78.2676, "Asia/Kolkata"),
+    "Haridwar, India": (29.9457, 78.1642, "Asia/Kolkata"),
     "Kathmandu, Nepal": (27.7172, 85.3240, "Asia/Kathmandu"),
     "London, UK": (51.5074, -0.1278, "Europe/London"),
     "New York, USA": (40.7128, -74.0060, "America/New_York"),

@@ -23,6 +23,7 @@ APIs, no network dependency for the core calculations.
 | 7. Report | `astro/report.py` | Markdown + PDF auto-generated report |
 | 8. Viewer | `astro/viewer.py` | SVG chart wheel/grid with hover tooltips |
 | 9. Persistence | `astro/persistence.py` | SQLite save / load / compare charts |
+| 10. Panchang | `astro/panchang.py`, `pages/1_Panchang.py` | Daily ऋषिकेश पंचांग (Tithi, Nakshatra, Yoga, Karana, muhurtas, Choghadiya) |
 
 Interpretation logic (functional benefic/malefic, house-by-house judging,
 repeating-pattern detection, remedies) lives in `astro/interpret.py`.
@@ -53,6 +54,8 @@ pip install -r requirements.txt
 ```bash
 streamlit run app.py
 ```
+
+Open **Panchang** from the sidebar (multipage app) for the daily Rishikesh almanac — no birth chart needed.
 
 Then enter birth **date, time and place** in the sidebar and click
 **Calculate Chart**. Birth-time accuracy is mission-critical for the

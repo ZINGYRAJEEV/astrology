@@ -14,7 +14,6 @@ import streamlit as st
 
 from astro import geo
 from astro.panchang import compute_panchang, format_time
-from astro.panchang_data import RISHIKESH
 from astro.chart_engine import format_dms
 from astro import reference as ref
 
@@ -51,35 +50,43 @@ with st.sidebar:
     use_now = st.checkbox("Show Panchang at current time (not sunrise)", value=False)
 
     st.markdown("### Location")
-    preset = st.selectbox(
-        "Place",
-        ["Rishikesh (default)"] + [c for c in geo.CITIES.keys()],
-        index=0,
+    place_mode = st.radio(
+        "Location", ["Pick a city", "Manual lat/long"], horizontal=True,
     )
-    if preset == "Rishikesh (default)":
-        lat, lon = RISHIKESH["latitude"], RISHIKESH["longitude"]
-        tzname = RISHIKESH["timezone"]
-        place = RISHIKESH["name"]
-        place_hi = RISHIKESH["name_hindi"]
-        alt = RISHIKESH["altitude_m"]
+    if place_mode == "Pick a city":
+        place_name = st.selectbox("Place", geo.PLACE_NAMES, index=0)
+        place_info = geo.resolve_place(place_name)
+        lat, lon, place_label = (
+            place_info.latitude, place_info.longitude, place_info.name,
+        )
+        tz_off = geo.tz_offset_hours(
+            place_info.timezone, datetime.combine(p_date, datetime.now().time()))
+        st.caption(
+            f"{place_label} \u00b7 {place_info.timezone} (UTC{tz_off:+.2f})"
+        )
     else:
-        lat, lon, tzname = geo.CITIES[preset]
-        place = preset
-        place_hi = preset.split(",")[0]
-        alt = 200
+        lat = st.number_input("Latitude", value=30.0869, format="%.4f")
+        lon = st.number_input("Longitude", value=78.2676, format="%.4f")
+        tz_off = st.number_input(
+            "UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
+        )
+        place_label = f"{lat:.3f},{lon:.3f}"
+        place_name = place_label
 
-    tz_off = geo.tz_offset_hours(tzname, datetime.combine(p_date, datetime.now().time()))
-    st.caption(f"{place} \u00b7 {lat:.3f}, {lon:.3f} \u00b7 UTC{tz_off:+.2f}")
+    place_hi = place_name.split(",")[0]
+    alt = 400 if "Rishikesh" in place_name else 200
 
     at_time = datetime.now() if use_now else None
     if st.button("Calculate Panchang", type="primary", use_container_width=True):
         st.session_state["panchang"] = compute_panchang(
-            p_date, lat, lon, tz_off, place, place_hi, alt, at_time=at_time,
+            p_date, lat, lon, tz_off,
+            place_label, place_hi, alt, at_time=at_time,
         )
 
 if "panchang" not in st.session_state:
     st.session_state["panchang"] = compute_panchang(
-        p_date, lat, lon, tz_off, place, place_hi, alt,
+        p_date, lat, lon, tz_off,
+        place_label, place_hi, alt,
         at_time=datetime.now() if use_now else None,
     )
 

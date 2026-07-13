@@ -46,20 +46,43 @@ with st.form("prediction_form"):
     with c2:
         intent = st.selectbox("Prediction focus", list(INTENT_HOUSES.keys()),
                               index=len(INTENT_HOUSES) - 1)
-        city = st.selectbox("Birth place", list(geo.CITIES.keys()),
-                            index=list(geo.CITIES.keys()).index("Rishikesh, India")
-                            if "Rishikesh, India" in geo.CITIES else 0)
-        lat, lon, tzname = geo.CITIES[city]
-        st.caption(f"{city} \u00b7 lat {lat:.3f}, lon {lon:.3f}")
+        place_mode = st.radio(
+            "Location", ["Pick a city", "Manual lat/long"], horizontal=True,
+        )
+        if place_mode == "Pick a city":
+            city = st.selectbox(
+                "Birth place",
+                geo.PLACE_NAMES,
+                index=geo.PLACE_NAMES.index("Rishikesh, India")
+                if "Rishikesh, India" in geo.PLACE_NAMES else 0,
+            )
+            place_info = geo.resolve_place(city)
+            lat, lon, place_label = (
+                place_info.latitude, place_info.longitude, place_info.name,
+            )
+            tz_name = place_info.timezone
+        else:
+            lat = st.number_input("Latitude", value=30.0869, format="%.4f")
+            lon = st.number_input("Longitude", value=78.2676, format="%.4f")
+            tz_off_manual = st.number_input(
+                "UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
+            )
+            place_label = f"{lat:.3f},{lon:.3f}"
+            tz_name = None
 
     submitted = st.form_submit_button("Generate Prediction", type="primary", use_container_width=True)
 
 if submitted:
-    tz_off = geo.tz_offset_hours(tzname, datetime.combine(b_date, b_time))
+    if tz_name:
+        tz_off = geo.tz_offset_hours(
+            tz_name, datetime.combine(b_date, b_time))
+    else:
+        tz_off = tz_off_manual
     birth = BirthData(
         name=name, year=b_date.year, month=b_date.month, day=b_date.day,
         hour=b_time.hour, minute=b_time.minute,
-        latitude=lat, longitude=lon, tz_offset=tz_off, place=city,
+        latitude=lat, longitude=lon,
+        tz_offset=tz_off, place=place_label,
     )
     chart = compute_chart(birth)
     pred = generate_prediction(chart, intent)

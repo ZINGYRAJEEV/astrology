@@ -210,28 +210,42 @@ with st.sidebar:
         )
     st.caption("Birth time accuracy is mission-critical for the Ascendant.")
 
-    place_mode = st.radio("Location", ["Pick a city", "Manual lat/long"], horizontal=True)
+    place_mode = st.radio(
+        "Location", ["Pick a city", "Manual lat/long"], horizontal=True,
+    )
     if place_mode == "Pick a city":
-        city = st.selectbox("City", list(geo.CITIES.keys()))
-        lat, lon, tzname = geo.CITIES[city]
-        place_label = city
+        city = st.selectbox(
+            "Birth place",
+            geo.PLACE_NAMES,
+            index=geo.PLACE_NAMES.index("Rishikesh, India")
+            if "Rishikesh, India" in geo.PLACE_NAMES else 0,
+        )
+        place_info = geo.resolve_place(city)
+        lat, lon, place_label = (
+            place_info.latitude, place_info.longitude, place_info.name,
+        )
         try:
             tz_off = geo.tz_offset_hours(
-                tzname, datetime.combine(b_date, b_time))
+                place_info.timezone, datetime.combine(b_date, b_time))
         except Exception:
-            tz_off = geo.tz_offset_hours(tzname, datetime.now())
-        st.caption(f"Lat {lat:.3f}, Lon {lon:.3f}, UTC{tz_off:+.2f} ({tzname})")
+            tz_off = geo.tz_offset_hours(place_info.timezone, datetime.now())
+        st.caption(
+            f"{place_label} \u00b7 {place_info.timezone} (UTC{tz_off:+.2f})"
+        )
     else:
-        lat = st.number_input("Latitude", value=28.6139, format="%.4f")
-        lon = st.number_input("Longitude", value=77.2090, format="%.4f")
-        tz_off = st.number_input("UTC offset (hours)", value=5.5, step=0.25, format="%.2f")
+        lat = st.number_input("Latitude", value=30.0869, format="%.4f")
+        lon = st.number_input("Longitude", value=78.2676, format="%.4f")
+        tz_off = st.number_input(
+            "UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
+        )
         place_label = f"{lat:.3f},{lon:.3f}"
 
     if st.button("Calculate Chart", type="primary", use_container_width=True):
         birth = BirthData(
             name=name, year=b_date.year, month=b_date.month, day=b_date.day,
             hour=b_time.hour, minute=b_time.minute,
-            latitude=lat, longitude=lon, tz_offset=tz_off, place=place_label,
+            latitude=lat, longitude=lon,
+            tz_offset=tz_off, place=place_label,
         )
         set_chart(compute_chart(birth))
         st.session_state.update(f_name=name, f_date=b_date, f_time=b_time)

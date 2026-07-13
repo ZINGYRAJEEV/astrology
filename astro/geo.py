@@ -1,19 +1,21 @@
 """Lightweight, offline geo & timezone helpers.
 
-To avoid a network dependency for something this core, we ship a small
-built-in city table (lat, lon, IANA timezone). Users can always override
-with manual latitude/longitude/UTC-offset entry in the UI.
+Place names map to latitude, longitude and IANA timezone internally. The UI
+offers a city picker or manual latitude/longitude/UTC-offset entry.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, NamedTuple, Optional
 
 import pytz
 
-# name -> (latitude, longitude, IANA timezone)
+# Place name -> (latitude, longitude, IANA timezone)
 CITIES: Dict[str, tuple] = {
+    "Rishikesh, India": (30.0869, 78.2676, "Asia/Kolkata"),
+    "Haridwar, India": (29.9457, 78.1642, "Asia/Kolkata"),
+    "Dehradun, India": (30.3165, 78.0322, "Asia/Kolkata"),
     "New Delhi, India": (28.6139, 77.2090, "Asia/Kolkata"),
     "Mumbai, India": (19.0760, 72.8777, "Asia/Kolkata"),
     "Kolkata, India": (22.5726, 88.3639, "Asia/Kolkata"),
@@ -26,8 +28,13 @@ CITIES: Dict[str, tuple] = {
     "Varanasi, India": (25.3176, 82.9739, "Asia/Kolkata"),
     "Lucknow, India": (26.8467, 80.9462, "Asia/Kolkata"),
     "Patna, India": (25.5941, 85.1376, "Asia/Kolkata"),
-    "Rishikesh, India": (30.0869, 78.2676, "Asia/Kolkata"),
-    "Haridwar, India": (29.9457, 78.1642, "Asia/Kolkata"),
+    "Chandigarh, India": (30.7333, 76.7794, "Asia/Kolkata"),
+    "Amritsar, India": (31.6340, 74.8723, "Asia/Kolkata"),
+    "Srinagar, India": (34.0837, 74.7973, "Asia/Kolkata"),
+    "Guwahati, India": (26.1445, 91.7362, "Asia/Kolkata"),
+    "Bhopal, India": (23.2599, 77.4126, "Asia/Kolkata"),
+    "Indore, India": (22.7196, 75.8577, "Asia/Kolkata"),
+    "Nagpur, India": (21.1458, 79.0882, "Asia/Kolkata"),
     "Kathmandu, Nepal": (27.7172, 85.3240, "Asia/Kathmandu"),
     "London, UK": (51.5074, -0.1278, "Europe/London"),
     "New York, USA": (40.7128, -74.0060, "America/New_York"),
@@ -40,12 +47,27 @@ CITIES: Dict[str, tuple] = {
     "Tokyo, Japan": (35.6762, 139.6503, "Asia/Tokyo"),
 }
 
+# Sorted list for dropdowns (Rishikesh first as default panchang city).
+PLACE_NAMES = list(CITIES.keys())
+
+
+class PlaceInfo(NamedTuple):
+    name: str
+    latitude: float
+    longitude: float
+    timezone: str
+
+
+def resolve_place(place_name: str) -> PlaceInfo:
+    """Look up coordinates and timezone for a place name."""
+    if place_name not in CITIES:
+        raise KeyError(f"Unknown place: {place_name}")
+    lat, lon, tz = CITIES[place_name]
+    return PlaceInfo(name=place_name, latitude=lat, longitude=lon, timezone=tz)
+
 
 def tz_offset_hours(tz_name: str, dt: datetime) -> float:
-    """UTC offset (hours, east-positive) for ``tz_name`` on date ``dt``.
-
-    Uses pytz so historical/DST rules are honoured for the birth date.
-    """
+    """UTC offset (hours, east-positive) for ``tz_name`` on date ``dt``."""
     tz = pytz.timezone(tz_name)
     localized = tz.localize(dt, is_dst=None) if dt else tz.localize(datetime.now())
     return localized.utcoffset().total_seconds() / 3600.0

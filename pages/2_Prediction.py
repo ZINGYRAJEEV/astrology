@@ -37,6 +37,39 @@ st.markdown(
 st.markdown("# \U0001f52e Astrology Prediction")
 st.caption("Janam Kundli + Panchang at birth \u00b7 Lahiri sidereal \u00b7 plain-language predictions")
 
+st.markdown("### Birth place")
+place_mode = st.radio(
+    "Location", ["Pick a city", "Manual lat/long"], horizontal=True,
+    key="pred_place_mode",
+)
+if place_mode == "Pick a city":
+    city = st.selectbox(
+        "Birth place",
+        geo.PLACE_NAMES,
+        index=geo.PLACE_NAMES.index("Rishikesh, India")
+        if "Rishikesh, India" in geo.PLACE_NAMES else 0,
+        key="pred_city",
+    )
+    place_info = geo.resolve_place(city)
+    lat, lon, place_label = (
+        place_info.latitude, place_info.longitude, place_info.name,
+    )
+    tz_name = place_info.timezone
+    st.caption(f"{place_label} \u00b7 {place_info.timezone}")
+else:
+    col_lat, col_lon, col_tz = st.columns(3)
+    with col_lat:
+        lat = st.number_input("Latitude", value=30.0869, format="%.4f", key="pred_lat")
+    with col_lon:
+        lon = st.number_input("Longitude", value=78.2676, format="%.4f", key="pred_lon")
+    with col_tz:
+        tz_off_manual = st.number_input(
+            "UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
+            key="pred_tz",
+        )
+    place_label = f"{lat:.3f},{lon:.3f}"
+    tz_name = None
+
 with st.form("prediction_form"):
     c1, c2 = st.columns(2)
     with c1:
@@ -46,29 +79,6 @@ with st.form("prediction_form"):
     with c2:
         intent = st.selectbox("Prediction focus", list(INTENT_HOUSES.keys()),
                               index=len(INTENT_HOUSES) - 1)
-        place_mode = st.radio(
-            "Location", ["Pick a city", "Manual lat/long"], horizontal=True,
-        )
-        if place_mode == "Pick a city":
-            city = st.selectbox(
-                "Birth place",
-                geo.PLACE_NAMES,
-                index=geo.PLACE_NAMES.index("Rishikesh, India")
-                if "Rishikesh, India" in geo.PLACE_NAMES else 0,
-            )
-            place_info = geo.resolve_place(city)
-            lat, lon, place_label = (
-                place_info.latitude, place_info.longitude, place_info.name,
-            )
-            tz_name = place_info.timezone
-        else:
-            lat = st.number_input("Latitude", value=30.0869, format="%.4f")
-            lon = st.number_input("Longitude", value=78.2676, format="%.4f")
-            tz_off_manual = st.number_input(
-                "UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
-            )
-            place_label = f"{lat:.3f},{lon:.3f}"
-            tz_name = None
 
     submitted = st.form_submit_button("Generate Prediction", type="primary", use_container_width=True)
 

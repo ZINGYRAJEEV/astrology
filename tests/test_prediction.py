@@ -24,7 +24,15 @@ def test_generate_prediction():
     assert len(pred["life_predictions"]) >= 6
     assert pred["timing"]["birth_nakshatra_lord"]
     assert pred["opening"]
+    rk = pred["rishikesh"]
+    assert rk["ishtakal"]["formatted"]
+    assert rk["navaratna"]["percent"] > 0
+    assert rk["avakhada"]["varna"] in ("Brahmin", "Kshatriya", "Vaishya", "Shudra")
+    assert rk["avakhada"]["gana"] in ("Deva", "Manushya", "Rakshasa")
+    assert len(rk["navaratna"]["breakdown"]) == 7
+    assert pred["timing"]["guru_gochar"]
     print("Nakshatra:", pred["panchang_at_birth"]["nakshatra"])
+    print("Navaratna:", rk["navaratna"]["verdict"], rk["navaratna"]["percent"])
     print("Areas:", len(pred["life_predictions"]))
 
 
@@ -33,6 +41,8 @@ def test_predict_from_birth():
     assert pred["focus_intent"] == "Marriage & relationships"
     md = prediction_markdown(pred)
     assert "Astrology Prediction" in md
+    assert "Rishikesh Panchang Evaluation" in md
+    assert "Avakhada Chakra" in md
     assert len(md) > 500
 
 

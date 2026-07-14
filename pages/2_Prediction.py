@@ -35,7 +35,7 @@ st.markdown(
 )
 
 st.markdown("# \U0001f52e Astrology Prediction")
-st.caption("Janam Kundli + Panchang at birth \u00b7 Lahiri sidereal \u00b7 plain-language predictions")
+st.caption("Hrishikesh Panchang tradition \u00b7 Lahiri sidereal \u00b7 Phalita Navaratna weighting")
 
 st.markdown("### Birth place")
 place_mode = st.radio(
@@ -103,10 +103,11 @@ if "prediction" not in st.session_state:
     st.markdown(
         """
         ### What you'll receive
+        - **Rishikesh Panchang evaluation** — Ishtakal, five limbs, Navaratna scoring
+        - **Avakhada Chakra** — Varna, Vashya, Yoni, Gana, Nadi
         - **Birth Panchang** at your exact birth time (Tithi, Nakshatra, Yoga, Karana, Vaara)
         - **Life predictions** for personality, wealth, career, marriage, health and spirituality
-        - **Current Dasha timing** and year-ahead themes
-        - **Lucky elements** and cautions from your chart
+        - **Vimshottari Dasha**, Sade Sati & Guru Gochar timing
         - Downloadable Markdown report
         """
     )
@@ -114,6 +115,7 @@ if "prediction" not in st.session_state:
 
 pred = st.session_state["prediction"]
 pc = pred["panchang_at_birth"]
+rk = pred.get("rishikesh", {})
 
 st.markdown(
     f"""
@@ -128,6 +130,23 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+if rk:
+    nav = rk["navaratna"]
+    chip = {"Auspicious": "chip-ok", "Mixed": "chip-mix", "Challenged": "chip-bad"}[nav["verdict"]]
+    st.markdown(
+        f"""
+        <div class="pcard">
+          <span class="{chip}">{nav['verdict']} — {nav['percent']}%</span>
+          <div class="pred-title" style="margin-top:8px">Rishikesh Panchang Birth Quality</div>
+          <div style="margin-top:6px;color:#9aa3b8">
+            Ishtakal: {rk['ishtakal']['formatted']} after sunrise ({rk['sunrise_at_birth']})<br>
+            {rk['tradition']}
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 st.markdown("### Birth Panchang (at your birth time)")
 p1, p2, p3, p4, p5 = st.columns(5)
 for col, label, val in zip(
@@ -138,12 +157,48 @@ for col, label, val in zip(
 ):
     col.markdown(f"**{label}**  \n{val}")
 
+if rk:
+    av = rk["avakhada"]
+    st.markdown("### Avakhada Chakra")
+    a1, a2, a3, a4, a5 = st.columns(5)
+    for col, label, val in zip(
+        [a1, a2, a3, a4, a5],
+        ["Varna", "Vashya", "Yoni", "Gana", "Nadi"],
+        [f"{av['varna']}", f"{av['vashya']}", f"{av['yoni']}",
+         f"{av['gana']}", f"{av['nadi']}"],
+    ):
+        col.markdown(f"**{label}**  \n{val}")
+
+    st.markdown("### Five Limbs (Phalita Navaratna weights)")
+    for item in rk["navaratna"]["breakdown"]:
+        limb = rk["limbs"][item["limb"]]
+        q = item["quality"]
+        chip_class = (
+            "chip-ok" if q in ("Auspicious", "Strong", "Sampat", "Kshema", "Sadhana", "Mitra", "Ati-Mitra")
+            else "chip-bad" if q in ("Challenged", "Weak", "Janma", "Vipat", "Pratyak", "Naidhana")
+            else "chip-mix"
+        )
+        st.markdown(
+            f"""
+            <div class="pcard">
+              <span class="{chip_class}">{item['limb'].title()} (wt {item['weight']}) — {q}</span>
+              <div style="margin-top:6px;font-size:13px;color:#9aa3b8">{limb['element']}</div>
+              <div style="margin-top:4px">{limb['note']}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    st.caption(rk["navaratna"]["priority_note"])
+
 st.markdown("### Overview")
 st.markdown(f"<div class='pcard'>{pred['opening']}</div>", unsafe_allow_html=True)
 
 st.markdown("### Life predictions")
 for lp in pred["life_predictions"]:
-    chip_class = {"Supported": "chip-ok", "Mixed": "chip-mix", "Challenged": "chip-bad"}[lp["verdict"]]
+    verdict = lp["verdict"]
+    chip_map = {"Supported": "chip-ok", "Mixed": "chip-mix", "Challenged": "chip-bad",
+                "Auspicious": "chip-ok"}
+    chip_class = chip_map.get(verdict, "chip-mix")
     st.markdown(
         f"""
         <div class="pcard">
@@ -167,7 +222,8 @@ st.markdown(
     f"Current: <b>{t['current_maha'] or '—'}</b> Mahadasha"
     + (f" / {t['current_antar']} Antardasha" if t.get("current_antar") else "")
     + f"<br>{t['year_ahead']}<br>"
-    f"Sade Sati: {t['sade_sati']}"
+    f"Sade Sati: {t['sade_sati']}<br>"
+    f"Guru Gochar: {t.get('guru_gochar', '—')}"
     f"</div>",
     unsafe_allow_html=True,
 )
@@ -194,6 +250,7 @@ st.download_button("Download prediction report (Markdown)", md,
                    mime="text/markdown", use_container_width=True)
 
 st.caption(
-    "Predictions merge sidereal chart analysis with Panchang at birth. "
-    "Use alongside the main Horoscope app for full chart details and remedies."
+    "Predictions follow the Shri Kashi Vishwanath Hrishikesh Panchang tradition: "
+    "Ishtakal, five-limb Navaratna weighting, Avakhada Chakra, Vimshottari Dasha & Gochar. "
+    "For guidance and self-reflection, not deterministic fate."
 )

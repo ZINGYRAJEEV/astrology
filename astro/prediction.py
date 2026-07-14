@@ -23,6 +23,7 @@ from .interpret import (
     recommend_remedies, ruled_houses, INTENT_HOUSES,
 )
 from .dasha_calc import compute_vimshottari, current_dasha, starting_nakshatra, sade_sati_status
+from .rishikesh_prediction import analyze_rishikesh_birth
 
 
 def _birth_datetime(chart: Chart) -> datetime:
@@ -71,6 +72,8 @@ def generate_prediction(
     """Full personalised prediction from birth data + Panchang + chart."""
     b = chart.birth
     panch = birth_panchang(chart)
+    birth_dt = _birth_datetime(chart)
+    rishikesh = analyze_rishikesh_birth(chart, panch, birth_dt)
     strengths = all_strengths(chart)
     houses = analyse_all_houses(chart)
     foundation = chart_foundation_score(chart)
@@ -108,13 +111,16 @@ def generate_prediction(
         "summary": nak.get("prediction", "Your birth star shapes your inner nature."),
     }
 
-    # Opening prediction for the native.
+    # Opening prediction — Rishikesh Panchang synthesis + chart foundation.
     opening = (
         f"{b.name or 'Dear native'}, born on {b.day:02d}/{b.month:02d}/{b.year} at "
-        f"{b.hour:02d}:{b.minute:02d} in {b.place or 'your birthplace'}, you carry "
-        f"{chart.lagna_sign} Ascendant with Moon in {moon.nakshatra} (pada {moon.nakshatra_pada}). "
-        f"Your birth Panchang reads: {panch.vaara.name}, {panch.tithi.name} ({panch.paksha}), "
+        f"{b.hour:02d}:{b.minute:02d} in {b.place or 'your birthplace'} "
+        f"({rishikesh['ishtakal']['formatted']} after sunrise at {rishikesh['sunrise_at_birth']}), "
+        f"you carry {chart.lagna_sign} Ascendant with Moon in {moon.nakshatra} "
+        f"(pada {moon.nakshatra_pada}, Janma Rashi {moon.sign}). "
+        f"Birth Panchang: {panch.vaara.name}, {panch.tithi.name} ({panch.paksha}), "
         f"Yoga {panch.yoga.name}, Karana {panch.karana.name}. "
+        f"{rishikesh['synthesis']} "
         f"{nak.get('prediction', '')} "
         f"Chart foundation scores {foundation['average_percent']}% overall dignity."
     )
@@ -122,15 +128,24 @@ def generate_prediction(
     # Life-area predictions (chart + panchang blend).
     life_predictions: List[Dict] = []
 
-    # Personality (always).
+    rk = rishikesh
+    av = rk["avakhada"]
+    nav = rk["navaratna"]
+
+    # Personality (always) — Avakhada + five limbs per Rishikesh tradition.
     life_predictions.append({
         "area": "Personality & nature",
-        "verdict": "Supported" if ll.score >= 0.5 else "Mixed",
+        "verdict": nav["verdict"] if nav["verdict"] != "Auspicious" else (
+            "Supported" if ll.score >= 0.5 else "Mixed"
+        ),
         "prediction": (
-            f"{nak.get('nature', 'Unique nature')}. {vaara_text} "
-            f"Birth Tithi theme: {tithi_text} "
-            f"Yoga influence: {yoga_text} "
-            f"Karana note: {karana_text}"
+            f"{nak.get('nature', 'Unique nature')}. "
+            f"Avakhada: {av['varna']} Varna ({av['varna_meaning']}), "
+            f"{av['gana']} Gana ({av['gana_meaning']}), "
+            f"{av['yoni']} Yoni, {av['nadi']} Nadi ({av['nadi_meaning']}). "
+            f"{vaara_text} Birth Tithi: {tithi_text} "
+            f"Yoga: {yoga_text} Karana: {karana_text} "
+            f"Navaratna birth quality: {nav['verdict']} ({nav['percent']}%)."
         ),
         "panchang_factor": f"{moon.nakshatra} Nakshatra, {panch.tithi.name}",
         "chart_factor": f"{chart.lagna_sign} Lagna, Lagnesh {lagna_lord} ({ll.dignity})",
@@ -169,11 +184,13 @@ def generate_prediction(
     timing = {
         "birth_nakshatra": nak_info["nakshatra"],
         "birth_nakshatra_lord": nak_info["lord"],
+        "dasha_balance_years": round(nak_info["balance_years"], 2),
         "current_maha": maha.lord if maha else None,
         "current_antar": antar.lord if antar else None,
         "maha_until": format_time(maha.end) if maha else None,
         "year_ahead": _year_ahead(maha.lord, antar.lord if antar else None) if maha else "",
         "sade_sati": ss["phase"],
+        "guru_gochar": rk["guru_gochar"]["phase"],
     }
 
     # Lucky elements from chart + panchang.
@@ -190,7 +207,7 @@ def generate_prediction(
     # High-confidence patterns.
     pattern_texts = [p["detail"] for p in patterns[:3]]
 
-    cautions = []
+    cautions = list(rk["spoil_notes"])
     if ss["active"]:
         cautions.append(f"Sade Sati active: {ss['phase']} — period of Saturnian refinement.")
     if foundation["debilitated"]:
@@ -200,6 +217,8 @@ def generate_prediction(
         )
     if panch.karana.name == "Vishti":
         cautions.append("Birth Karana Vishti (Bhadra) — avoid impulsive starts; plan carefully.")
+    if rk["limbs"]["yoga"]["quality"] == "Challenged":
+        cautions.append(rk["limbs"]["yoga"]["note"])
 
     return {
         "name": b.name or "Native",
@@ -210,6 +229,7 @@ def generate_prediction(
             "lagna": chart.lagna_sign,
         },
         "panchang_at_birth": panchang_block,
+        "rishikesh": rishikesh,
         "opening": opening,
         "life_predictions": life_predictions,
         "focus_intent": intent,
@@ -253,8 +273,33 @@ def prediction_markdown(pred: Dict) -> str:
         "## Overview",
         pred["opening"],
         "",
-        "## Life Predictions",
     ]
+    rk = pred.get("rishikesh", {})
+    if rk:
+        lines += [
+            "## Rishikesh Panchang Evaluation",
+            f"- Tradition: {rk['tradition']}",
+            f"- Ishtakal: {rk['ishtakal']['formatted']} after sunrise ({rk['sunrise_at_birth']})",
+            f"- Navaratna score: {rk['navaratna']['verdict']} ({rk['navaratna']['percent']}%)",
+            "",
+            "### Avakhada Chakra",
+            f"- Varna: {rk['avakhada']['varna']} — {rk['avakhada']['varna_meaning']}",
+            f"- Vashya: {rk['avakhada']['vashya']} — {rk['avakhada']['vashya_meaning']}",
+            f"- Yoni: {rk['avakhada']['yoni']} — {rk['avakhada']['yoni_meaning']}",
+            f"- Gana: {rk['avakhada']['gana']} — {rk['avakhada']['gana_meaning']}",
+            f"- Nadi: {rk['avakhada']['nadi']} — {rk['avakhada']['nadi_meaning']}",
+            "",
+            "### Five Limbs (weighted)",
+        ]
+        for item in rk["navaratna"]["breakdown"]:
+            limb = rk["limbs"][item["limb"]]
+            lines.append(
+                f"- **{item['limb'].title()}** (wt {item['weight']}): "
+                f"{item['quality']} — {limb['note']}"
+            )
+        lines += ["", "### Gochar", f"- {rk['guru_gochar']['phase']}", ""]
+
+    lines += ["## Life Predictions"]
     for lp in pred["life_predictions"]:
         lines.append(f"### {lp['area']} ({lp['verdict']})")
         lines.append(lp["prediction"])
@@ -278,6 +323,10 @@ def prediction_markdown(pred: Dict) -> str:
         )
         lines.append(f"- {t['year_ahead']}")
     lines.append(f"- Sade Sati: {t['sade_sati']}")
+    if t.get("guru_gochar"):
+        lines.append(f"- Guru Gochar: {t['guru_gochar']}")
+    if t.get("dasha_balance_years"):
+        lines.append(f"- Dasha balance at birth: {t['dasha_balance_years']} years")
     lines.append("")
 
     if pred["patterns"]:
@@ -299,7 +348,8 @@ def prediction_markdown(pred: Dict) -> str:
     lines.append(f"- Gemstone hint (Lagnesh): {lk['gemstone_hint']}")
     lines.append("")
     lines.append(
-        "_Prediction combines Lahiri sidereal chart with Panchang at birth. "
+        "_Prediction follows the Shri Kashi Vishwanath Hrishikesh Panchang tradition "
+        "(Lahiri sidereal, Phalita Navaratna weighting). "
         "For guidance and self-reflection, not deterministic fate._"
     )
     return "\n".join(lines)

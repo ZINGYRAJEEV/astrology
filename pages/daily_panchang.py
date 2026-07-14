@@ -17,7 +17,7 @@ from astro.panchang import compute_panchang, format_time
 from astro.chart_engine import format_dms
 from astro import reference as ref
 
-st.set_page_config(page_title="Rishikesh Panchang", page_icon="\U0001f4c5", layout="wide")
+st.set_page_config(page_title="Daily Panchang", page_icon="\U0001f4c5", layout="wide")
 
 st.markdown(
     """
@@ -43,8 +43,8 @@ st.markdown(
 # Sidebar inputs
 # ---------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown("## \U0001f4c5 Panchang")
-    st.caption("Lahiri sidereal \u00b7 sunrise-based")
+    st.markdown("## \U0001f4c5 Daily Panchang")
+    st.caption("Tithi, Nakshatra, Yoga, Muhurta & Choghadiya \u00b7 Lahiri sidereal")
 
     p_date = st.date_input("Date", value=date.today())
     use_now = st.checkbox("Show Panchang at current time (not sunrise)", value=False)

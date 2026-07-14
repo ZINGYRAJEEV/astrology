@@ -16,7 +16,7 @@ from astro.chart_engine import BirthData, compute_chart
 from astro.prediction import generate_prediction, prediction_markdown
 from astro.interpret import INTENT_HOUSES
 
-st.set_page_config(page_title="Astrology Prediction", page_icon="\U0001f52e", layout="wide")
+st.set_page_config(page_title="Life Prediction", page_icon="\U0001f52e", layout="wide")
 
 st.markdown(
     """
@@ -34,8 +34,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.markdown("# \U0001f52e Astrology Prediction")
-st.caption("Hrishikesh Panchang tradition \u00b7 Lahiri sidereal \u00b7 Phalita Navaratna weighting")
+st.markdown("# \U0001f52e Life Prediction")
+st.caption("Hrishikesh Panchang tradition \u00b7 birth chart + Panchang at birth")
 
 st.markdown("### Birth place")
 place_mode = st.radio(

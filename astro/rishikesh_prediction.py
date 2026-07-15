@@ -150,30 +150,6 @@ def _chandrabala_at_birth(moon_sign_idx: int) -> Tuple[str, float, str]:
     return quality, score, note
 
 
-def _avakhada(moon_sign: str, nakshatra: str) -> Dict:
-    varna = rr.VARNA_BY_SIGN[moon_sign]
-    vashya = rr.VASHYA_BY_SIGN[moon_sign]
-    yoni = rr.YONI_BY_NAKSHATRA[nakshatra]
-    gana = rr.GANA_BY_NAKSHATRA[nakshatra]
-    nadi = rr.NADI_BY_NAKSHATRA[nakshatra]
-    return {
-        "varna": varna,
-        "varna_meaning": rr.VARNA_MEANING[varna],
-        "vashya": vashya,
-        "vashya_meaning": rr.VASHYA_MEANING[vashya],
-        "yoni": yoni,
-        "yoni_meaning": rr.YONI_MEANING[yoni],
-        "gana": gana,
-        "gana_meaning": rr.GANA_MEANING[gana],
-        "nadi": nadi,
-        "nadi_meaning": rr.NADI_MEANING[nadi],
-        "nadi_dosha_note": (
-            "Nadi matching is the critical filter in Ashtakoota Milan — "
-            "same Nadi between partners is traditionally avoided."
-        ),
-    }
-
-
 def _guru_gochar(chart: Chart, when: Optional[datetime] = None) -> Dict:
     """Jupiter transit relative to natal Moon (Gochar)."""
     when = when or datetime.now()
@@ -265,7 +241,7 @@ def analyze_rishikesh_birth(
     }
 
     navaratna = _navaratna_score(limbs)
-    avakhada = _avakhada(moon_sign, nak)
+    avakhada = rr.avakhada(moon_sign, nak, detailed=True)
     guru = _guru_gochar(chart)
 
     spoil_notes: List[str] = []

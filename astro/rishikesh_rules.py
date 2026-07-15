@@ -164,3 +164,32 @@ LIMB_ELEMENT: Dict[str, str] = {
     "yoga": "Ether — immunity, spiritual character & health",
     "karana": "Earth — execution, career capability & practicality",
 }
+
+
+def avakhada(moon_sign: str, nakshatra: str, *, detailed: bool = False) -> Dict[str, str]:
+    """Avakhada Chakra fields for a native (Moon sign + birth Nakshatra)."""
+    varna = VARNA_BY_SIGN[moon_sign]
+    vashya = VASHYA_BY_SIGN[moon_sign]
+    yoni = YONI_BY_NAKSHATRA[nakshatra]
+    gana = GANA_BY_NAKSHATRA[nakshatra]
+    nadi = NADI_BY_NAKSHATRA[nakshatra]
+    out = {
+        "varna": varna,
+        "vashya": vashya,
+        "yoni": yoni,
+        "gana": gana,
+        "nadi": nadi,
+    }
+    if detailed:
+        out.update({
+            "varna_meaning": VARNA_MEANING[varna],
+            "vashya_meaning": VASHYA_MEANING[vashya],
+            "yoni_meaning": YONI_MEANING[yoni],
+            "gana_meaning": GANA_MEANING[gana],
+            "nadi_meaning": NADI_MEANING[nadi],
+            "nadi_dosha_note": (
+                "Nadi matching is the critical filter in Ashtakoota Milan — "
+                "same Nadi between partners is traditionally avoided."
+            ),
+        })
+    return out

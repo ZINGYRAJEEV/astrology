@@ -1,9 +1,4 @@
-"""Astrology Prediction — birth chart + Panchang at birth.
-
-Enter name, date, time and place to receive personalised life predictions
-combining Janam Kundli (Lahiri sidereal) with the Panchang at your exact
-birth moment.
-"""
+"""Life Prediction — Hrishikesh Panchang birth chart + Panchang at birth."""
 
 from __future__ import annotations
 
@@ -13,7 +8,8 @@ import streamlit as st
 
 from astro import geo
 from astro.chart_engine import BirthData, compute_chart
-from astro.prediction import generate_prediction, prediction_markdown
+from astro.prediction import generate_prediction
+from astro.prediction_ui import render_prediction_results
 from astro.interpret import INTENT_HOUSES
 
 st.set_page_config(page_title="Life Prediction", page_icon="\U0001f52e", layout="wide")
@@ -113,144 +109,4 @@ if "prediction" not in st.session_state:
     )
     st.stop()
 
-pred = st.session_state["prediction"]
-pc = pred["panchang_at_birth"]
-rk = pred.get("rishikesh", {})
-
-st.markdown(
-    f"""
-    <div class="pcard">
-      <div class="pred-title">{pred['name']}</div>
-      <div style="color:#9aa3b8;margin-top:4px">
-        Born {pred['birth']['date']} at {pred['birth']['time']} \u00b7 {pred['birth']['place']}<br>
-        Lagna: {pred['birth']['lagna']} \u00b7 Focus: {pred['focus_intent']}
-      </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-if rk:
-    nav = rk["navaratna"]
-    chip = {"Auspicious": "chip-ok", "Mixed": "chip-mix", "Challenged": "chip-bad"}[nav["verdict"]]
-    st.markdown(
-        f"""
-        <div class="pcard">
-          <span class="{chip}">{nav['verdict']} — {nav['percent']}%</span>
-          <div class="pred-title" style="margin-top:8px">Rishikesh Panchang Birth Quality</div>
-          <div style="margin-top:6px;color:#9aa3b8">
-            Ishtakal: {rk['ishtakal']['formatted']} after sunrise ({rk['sunrise_at_birth']})<br>
-            {rk['tradition']}
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-st.markdown("### Birth Panchang (at your birth time)")
-p1, p2, p3, p4, p5 = st.columns(5)
-for col, label, val in zip(
-    [p1, p2, p3, p4, p5],
-    ["Vaara", "Tithi", "Nakshatra", "Yoga", "Karana"],
-    [pc["vaara"], pc["tithi"],
-     f"{pc['nakshatra']} (p.{pc['nakshatra_pada']})", pc["yoga"], pc["karana"]],
-):
-    col.markdown(f"**{label}**  \n{val}")
-
-if rk:
-    av = rk["avakhada"]
-    st.markdown("### Avakhada Chakra")
-    a1, a2, a3, a4, a5 = st.columns(5)
-    for col, label, val in zip(
-        [a1, a2, a3, a4, a5],
-        ["Varna", "Vashya", "Yoni", "Gana", "Nadi"],
-        [f"{av['varna']}", f"{av['vashya']}", f"{av['yoni']}",
-         f"{av['gana']}", f"{av['nadi']}"],
-    ):
-        col.markdown(f"**{label}**  \n{val}")
-
-    st.markdown("### Five Limbs (Phalita Navaratna weights)")
-    for item in rk["navaratna"]["breakdown"]:
-        limb = rk["limbs"][item["limb"]]
-        q = item["quality"]
-        chip_class = (
-            "chip-ok" if q in ("Auspicious", "Strong", "Sampat", "Kshema", "Sadhana", "Mitra", "Ati-Mitra")
-            else "chip-bad" if q in ("Challenged", "Weak", "Janma", "Vipat", "Pratyak", "Naidhana")
-            else "chip-mix"
-        )
-        st.markdown(
-            f"""
-            <div class="pcard">
-              <span class="{chip_class}">{item['limb'].title()} (wt {item['weight']}) — {q}</span>
-              <div style="margin-top:6px;font-size:13px;color:#9aa3b8">{limb['element']}</div>
-              <div style="margin-top:4px">{limb['note']}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    st.caption(rk["navaratna"]["priority_note"])
-
-st.markdown("### Overview")
-st.markdown(f"<div class='pcard'>{pred['opening']}</div>", unsafe_allow_html=True)
-
-st.markdown("### Life predictions")
-for lp in pred["life_predictions"]:
-    verdict = lp["verdict"]
-    chip_map = {"Supported": "chip-ok", "Mixed": "chip-mix", "Challenged": "chip-bad",
-                "Auspicious": "chip-ok"}
-    chip_class = chip_map.get(verdict, "chip-mix")
-    st.markdown(
-        f"""
-        <div class="pcard">
-          <span class="{chip_class}">{lp['verdict']}</span>
-          <div class="pred-title" style="margin-top:8px">{lp['area']}</div>
-          <div style="margin-top:6px">{lp['prediction']}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-st.markdown("### Your focus area")
-for fl in pred["focus_detail"]:
-    st.markdown(f"- {fl}")
-
-st.markdown("### Timing & year ahead")
-t = pred["timing"]
-st.markdown(
-    f"<div class='pcard'>"
-    f"Birth Nakshatra: <b>{t['birth_nakshatra']}</b> (Dasha lord: {t['birth_nakshatra_lord']})<br>"
-    f"Current: <b>{t['current_maha'] or '—'}</b> Mahadasha"
-    + (f" / {t['current_antar']} Antardasha" if t.get("current_antar") else "")
-    + f"<br>{t['year_ahead']}<br>"
-    f"Sade Sati: {t['sade_sati']}<br>"
-    f"Guru Gochar: {t.get('guru_gochar', '—')}"
-    f"</div>",
-    unsafe_allow_html=True,
-)
-
-if pred["cautions"]:
-    st.markdown("### Cautions")
-    for c in pred["cautions"]:
-        st.warning(c)
-
-lk = pred["lucky"]
-st.markdown("### Favourable elements")
-st.markdown(
-    f"<div class='pcard'>"
-    f"Weekday energy: {lk['day']} \u00b7 Birth star: {lk['nakshatra']} "
-    f"(lord {lk['nakshatra_lord']}) \u00b7 "
-    f"Gemstone hint: {lk['gemstone_hint']}"
-    f"</div>",
-    unsafe_allow_html=True,
-)
-
-md = prediction_markdown(pred)
-st.download_button("Download prediction report (Markdown)", md,
-                   file_name=f"prediction_{pred['name'].replace(' ','_')}.md",
-                   mime="text/markdown", use_container_width=True)
-
-st.caption(
-    "Predictions follow the Shri Kashi Vishwanath Hrishikesh Panchang tradition: "
-    "Ishtakal, five-limb Navaratna weighting, Avakhada Chakra, Vimshottari Dasha & Gochar. "
-    "For guidance and self-reflection, not deterministic fate."
-)
+render_prediction_results(st.session_state["prediction"], theme="default")

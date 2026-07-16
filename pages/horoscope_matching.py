@@ -59,7 +59,13 @@ def _birth_panel(title: str, prefix: str):
     name = st.text_input("Name", key=f"{prefix}_name", placeholder=title)
     c1, c2 = st.columns(2)
     with c1:
-        b_date = st.date_input("Date of birth", value=date(1990, 1, 1), key=f"{prefix}_date")
+        b_date = st.date_input(
+            "Date of birth",
+            value=date(1990, 1, 1),
+            min_value=date(1800, 1, 1),
+            max_value=date.today(),
+            key=f"{prefix}_date",
+        )
     with c2:
         b_time = st.time_input("Time of birth", value=time(12, 0), step=60, key=f"{prefix}_time")
     lat, lon, place, tz_name, tz_manual = _place_inputs(prefix)

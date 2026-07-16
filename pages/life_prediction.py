@@ -70,7 +70,12 @@ with st.form("prediction_form"):
     c1, c2 = st.columns(2)
     with c1:
         name = st.text_input("Full name", placeholder="Your name")
-        b_date = st.date_input("Date of birth", value=date(1990, 1, 1))
+        b_date = st.date_input(
+            "Date of birth",
+            value=date(1990, 1, 1),
+            min_value=date(1800, 1, 1),
+            max_value=date.today(),
+        )
         b_time = st.time_input("Time of birth", value=time(12, 0), step=60)
     with c2:
         intent = st.selectbox("Prediction focus", list(INTENT_HOUSES.keys()),

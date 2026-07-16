@@ -24,6 +24,7 @@ from .interpret import (
 )
 from .dasha_calc import compute_vimshottari, current_dasha, starting_nakshatra, sade_sati_status
 from .rishikesh_prediction import analyze_rishikesh_birth
+from . import friendly_report as fr
 
 
 def _birth_datetime(chart: Chart) -> datetime:
@@ -111,74 +112,30 @@ def generate_prediction(
         "summary": nak.get("prediction", "Your birth star shapes your inner nature."),
     }
 
-    # Opening prediction — Rishikesh Panchang synthesis + chart foundation.
-    opening = (
-        f"{b.name or 'Dear native'}, born on {b.day:02d}/{b.month:02d}/{b.year} at "
-        f"{b.hour:02d}:{b.minute:02d} in {b.place or 'your birthplace'} "
-        f"({rishikesh['ishtakal']['formatted']} after sunrise at {rishikesh['sunrise_at_birth']}), "
-        f"you carry {chart.lagna_sign} Ascendant with Moon in {moon.nakshatra} "
-        f"(pada {moon.nakshatra_pada}, Janma Rashi {moon.sign}). "
-        f"Birth Panchang: {panch.vaara.name}, {panch.tithi.name} ({panch.paksha}), "
-        f"Yoga {panch.yoga.name}, Karana {panch.karana.name}. "
-        f"{rishikesh['synthesis']} "
-        f"{nak.get('prediction', '')} "
-        f"Chart foundation scores {foundation['average_percent']}% overall dignity."
-    )
+    # Short summary placeholder — rebuilt after life_predictions exist (Rule 10).
+    opening = ""
 
-    # Life-area predictions (chart + panchang blend).
+    # Life-area predictions — plain verdict first, technical basis separate.
     life_predictions: List[Dict] = []
+    av = rishikesh["avakhada"]
+    nav = rishikesh["navaratna"]
 
-    rk = rishikesh
-    av = rk["avakhada"]
-    nav = rk["navaratna"]
+    life_predictions.append(fr.format_personality_section(
+        nak, av, nav["percent"], vaara_text, tithi_text, yoga_text, karana_text,
+        chart.lagna_sign, lagna_lord, ll.dignity, ll.score, nav["verdict"],
+    ))
 
-    # Personality (always) — Avakhada + five limbs per Rishikesh tradition.
-    life_predictions.append({
-        "area": "Personality & nature",
-        "verdict": nav["verdict"] if nav["verdict"] != "Auspicious" else (
-            "Supported" if ll.score >= 0.5 else "Mixed"
-        ),
-        "prediction": (
-            f"{nak.get('nature', 'Unique nature')}. "
-            f"Avakhada: {av['varna']} Varna ({av['varna_meaning']}), "
-            f"{av['gana']} Gana ({av['gana_meaning']}), "
-            f"{av['yoni']} Yoni, {av['nadi']} Nadi ({av['nadi_meaning']}). "
-            f"{vaara_text} Birth Tithi: {tithi_text} "
-            f"Yoga: {yoga_text} Karana: {karana_text} "
-            f"Navaratna birth quality: {nav['verdict']} ({nav['percent']}%)."
-        ),
-        "panchang_factor": f"{moon.nakshatra} Nakshatra, {panch.tithi.name}",
-        "chart_factor": f"{chart.lagna_sign} Lagna, Lagnesh {lagna_lord} ({ll.dignity})",
-    })
-
-    for area_name, house_num, subtitle in pd.LIFE_AREAS[1:]:
+    for area_name, house_num, _subtitle in pd.LIFE_AREAS[1:]:
         r = houses[house_num]
-        verdict = r.verdict
-        nak_career = nak.get("career", "") if house_num == 10 else ""
-        nak_rel = nak.get("relationship", "") if house_num == 7 else ""
-        extra = nak_career or nak_rel or ""
-        life_predictions.append({
-            "area": area_name,
-            "verdict": verdict,
-            "prediction": (
-                f"{pd.VERDICT_PREDICTION[verdict]} "
-                f"House {house_num} ({r.name}): lord {r.lord} in house {r.lord_house} "
-                f"({r.lord_dignity}). Ashtakavarga {r.sav_points} bindus ({r.sav_class}). "
-                f"{extra}"
-            ).strip(),
-            "panchang_factor": panchang_block["summary"] if house_num in (9, 7) else "",
-            "chart_factor": "; ".join(r.signals[:2]) if r.signals else r.verdict,
-        })
+        extra = ""
+        if house_num == 10:
+            extra = nak.get("career", "")
+        elif house_num == 7:
+            extra = nak.get("relationship", "")
+        life_predictions.append(fr.format_house_section(area_name, house_num, r, extra))
 
-    # Focus area (user intent).
     focus_houses = INTENT_HOUSES.get(intent, INTENT_HOUSES["General reading"])
-    focus_lines = []
-    for h in focus_houses:
-        r = houses[h]
-        focus_lines.append(
-            f"**{ref.HOUSE_THEME[h].title()}** ({r.verdict}): lord {r.lord} "
-            f"({r.lord_dignity}) — {pd.VERDICT_PREDICTION[r.verdict]}"
-        )
+    focus_lines = [fr.format_focus_line(h, houses[h]) for h in focus_houses]
 
     # Timing / year ahead.
     timing = {
@@ -190,7 +147,7 @@ def generate_prediction(
         "maha_until": format_time(maha.end) if maha else None,
         "year_ahead": _year_ahead(maha.lord, antar.lord if antar else None) if maha else "",
         "sade_sati": ss["phase"],
-        "guru_gochar": rk["guru_gochar"]["phase"],
+        "guru_gochar": rishikesh["guru_gochar"]["phase"],
     }
 
     # Lucky elements from chart + panchang.
@@ -207,33 +164,37 @@ def generate_prediction(
     # High-confidence patterns.
     pattern_texts = [p["detail"] for p in patterns[:3]]
 
-    cautions = list(rk["spoil_notes"])
+    cautions = list(rishikesh["spoil_notes"])
     if ss["active"]:
         cautions.append(f"Sade Sati active: {ss['phase']} — period of Saturnian refinement.")
     if foundation["debilitated"]:
         cautions.append(
-            "Planets needing care: " + ", ".join(foundation["debilitated"]) +
-            " — remedies in Phase 3 may help."
+            "Some planets are in weak placements and may need support — "
+            "see Horoscope & Reading → Phase 3 for remedies (not in this download)."
         )
     if panch.karana.name == "Vishti":
         cautions.append("Birth Karana Vishti (Bhadra) — avoid impulsive starts; plan carefully.")
-    if rk["limbs"]["yoga"]["quality"] == "Challenged":
-        cautions.append(rk["limbs"]["yoga"]["note"])
+    if rishikesh["limbs"]["yoga"]["quality"] == "Challenged":
+        cautions.append(rishikesh["limbs"]["yoga"]["note"])
 
-    return {
+    result = {
         "name": b.name or "Native",
+        "moon_sign": moon.sign,
         "birth": {
             "date": f"{b.day:02d}/{b.month:02d}/{b.year}",
             "time": f"{b.hour:02d}:{b.minute:02d}",
             "place": b.place,
             "lagna": chart.lagna_sign,
+            "day": b.day, "month": b.month, "year": b.year,
+            "hour": b.hour, "minute": b.minute,
         },
         "panchang_at_birth": panchang_block,
         "rishikesh": rishikesh,
         "opening": opening,
         "life_predictions": life_predictions,
         "focus_intent": intent,
-        "focus_detail": focus_lines,
+        "focus_detail": [fl["plain"] for fl in focus_lines],
+        "focus_friendly": focus_lines,
         "timing": timing,
         "lucky": lucky,
         "patterns": pattern_texts,
@@ -245,6 +206,15 @@ def generate_prediction(
             for r in remedies[:4]
         ],
     }
+    # Rebuild summary now that life_predictions exist.
+    result["summary"] = fr.build_summary(
+        result["name"], life_predictions, rishikesh["navaratna"]["percent"], intent,
+    )
+    result["opening"] = result["summary"]
+    return fr.enrich_prediction(result, {
+        "day": b.day, "month": b.month, "year": b.year,
+        "hour": b.hour, "minute": b.minute, "place": b.place,
+    })
 
 
 def predict_from_birth(birth: BirthData, intent: str = "General reading") -> Dict:
@@ -254,102 +224,69 @@ def predict_from_birth(birth: BirthData, intent: str = "General reading") -> Dic
 
 
 def prediction_markdown(pred: Dict) -> str:
-    """Export prediction as Markdown."""
+    """Export user-friendly prediction as Markdown."""
     lines = [
-        f"# Astrology Prediction — {pred['name']}",
+        f"# Life Prediction — {pred['name']}",
         "",
-        f"**Birth:** {pred['birth']['date']} {pred['birth']['time']} · {pred['birth']['place']}",
-        f"**Lagna:** {pred['birth']['lagna']}",
+        f"> {pred.get('scope_note', fr.SCOPE_NOTE)}",
         "",
-        "## Birth Panchang",
-        f"- Vaara: {pred['panchang_at_birth']['vaara']}",
-        f"- Tithi: {pred['panchang_at_birth']['tithi']}",
-        f"- Nakshatra: {pred['panchang_at_birth']['nakshatra']} "
-        f"(pada {pred['panchang_at_birth']['nakshatra_pada']}, "
-        f"lord {pred['panchang_at_birth']['nakshatra_lord']})",
-        f"- Yoga: {pred['panchang_at_birth']['yoga']}",
-        f"- Karana: {pred['panchang_at_birth']['karana']}",
+        pred.get("verdict_legend", fr.VERDICT_LEGEND),
         "",
-        "## Overview",
-        pred["opening"],
+        "## At a glance",
+        pred.get("summary", pred.get("opening", "")),
         "",
     ]
-    rk = pred.get("rishikesh", {})
-    if rk:
-        lines += [
-            "## Rishikesh Panchang Evaluation",
-            f"- Tradition: {rk['tradition']}",
-            f"- Ishtakal: {rk['ishtakal']['formatted']} after sunrise ({rk['sunrise_at_birth']})",
-            f"- Navaratna score: {rk['navaratna']['verdict']} ({rk['navaratna']['percent']}%)",
-            "",
-            "### Avakhada Chakra",
-            f"- Varna: {rk['avakhada']['varna']} — {rk['avakhada']['varna_meaning']}",
-            f"- Vashya: {rk['avakhada']['vashya']} — {rk['avakhada']['vashya_meaning']}",
-            f"- Yoni: {rk['avakhada']['yoni']} — {rk['avakhada']['yoni_meaning']}",
-            f"- Gana: {rk['avakhada']['gana']} — {rk['avakhada']['gana_meaning']}",
-            f"- Nadi: {rk['avakhada']['nadi']} — {rk['avakhada']['nadi_meaning']}",
-            "",
-            "### Five Limbs (weighted)",
-        ]
-        for item in rk["navaratna"]["breakdown"]:
-            limb = rk["limbs"][item["limb"]]
-            lines.append(
-                f"- **{item['limb'].title()}** (wt {item['weight']}): "
-                f"{item['quality']} — {limb['note']}"
-            )
-        lines += ["", "### Gochar", f"- {rk['guru_gochar']['phase']}", ""]
-
-    lines += ["## Life Predictions"]
-    for lp in pred["life_predictions"]:
-        lines.append(f"### {lp['area']} ({lp['verdict']})")
-        lines.append(lp["prediction"])
-        lines.append("")
-
-    lines.append(f"## Focus: {pred['focus_intent']}")
-    for fl in pred["focus_detail"]:
-        lines.append(f"- {fl}")
+    for line in pred.get("birth_intro", []):
+        lines.append(f"- {line}")
     lines.append("")
 
-    t = pred["timing"]
-    lines.append("## Timing")
-    lines.append(
-        f"- Birth Nakshatra dasha lord: {t['birth_nakshatra_lord']} "
-        f"({t['birth_nakshatra']})"
-    )
-    if t["current_maha"]:
-        lines.append(
-            f"- Current period: {t['current_maha']} Mahadasha"
-            + (f" / {t['current_antar']} Antardasha" if t["current_antar"] else "")
-        )
-        lines.append(f"- {t['year_ahead']}")
-    lines.append(f"- Sade Sati: {t['sade_sati']}")
-    if t.get("guru_gochar"):
-        lines.append(f"- Guru Gochar: {t['guru_gochar']}")
-    if t.get("dasha_balance_years"):
-        lines.append(f"- Dasha balance at birth: {t['dasha_balance_years']} years")
+    groups = pred.get("groups", fr.group_predictions(pred["life_predictions"]))
+    section_map = [
+        ("Who you are", groups.get("who_you_are", [])),
+        ("What's working well", groups.get("working_well", [])),
+        ("What needs effort", groups.get("needs_effort", [])),
+    ]
+    for section_title, items in section_map:
+        if not items:
+            continue
+        lines.append(f"## {section_title}")
+        for lp in items:
+            lines += [
+                f"### {lp.get('title', lp['area'])}",
+                lp.get("plain", lp.get("prediction", "")),
+                "",
+                f"> Technical basis: {lp.get('technical', lp.get('technical_basis', ''))}",
+                "",
+            ]
+
+    lines.append(f"## Your focus: {pred['focus_intent']}")
+    for fl in pred.get("focus_friendly", []):
+        if isinstance(fl, dict):
+            lines.append(f"- {fl['plain']}")
+            if fl.get("technical"):
+                lines.append(f"  > {fl['technical']}")
+        else:
+            lines.append(f"- {fl}")
     lines.append("")
 
-    if pred["patterns"]:
-        lines.append("## High-confidence patterns")
-        for p in pred["patterns"]:
-            lines.append(f"- {p}")
-        lines.append("")
+    tf = pred.get("timing_friendly", fr.format_timing_plain(pred.get("timing", {})))
+    lines += ["## What's happening now (timing)", tf["plain"], "", f"> {tf['technical']}", ""]
 
-    if pred["cautions"]:
-        lines.append("## Cautions")
+    if pred.get("cautions"):
+        lines.append("## Watch points")
         for c in pred["cautions"]:
             lines.append(f"- {c}")
         lines.append("")
 
-    lines.append("## Lucky elements")
     lk = pred["lucky"]
-    lines.append(f"- Favourable weekday energy: {lk['day']}")
-    lines.append(f"- Birth star: {lk['nakshatra']} (lord {lk['nakshatra_lord']})")
-    lines.append(f"- Gemstone hint (Lagnesh): {lk['gemstone_hint']}")
-    lines.append("")
-    lines.append(
-        "_Prediction follows the Shri Kashi Vishwanath Hrishikesh Panchang tradition "
-        "(Lahiri sidereal, Phalita Navaratna weighting). "
-        "For guidance and self-reflection, not deterministic fate._"
-    )
+    lines += [
+        "## Favourable elements",
+        f"- Weekday energy: {lk['day']}",
+        f"- Birth star: {lk['nakshatra']} (lord {lk['nakshatra_lord']})",
+        f"- Gemstone hint: {lk['gemstone_hint']}",
+        "",
+        pred.get("remedies_note", ""),
+        "",
+        "_Hrishikesh Panchang tradition · Lahiri sidereal · For guidance, not deterministic fate._",
+    ]
     return "\n".join(lines)

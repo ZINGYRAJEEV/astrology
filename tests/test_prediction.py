@@ -40,9 +40,10 @@ def test_predict_from_birth():
     pred = predict_from_birth(BIRTH, "Marriage & relationships")
     assert pred["focus_intent"] == "Marriage & relationships"
     md = prediction_markdown(pred)
-    assert "Astrology Prediction" in md
-    assert "Rishikesh Panchang Evaluation" in md
-    assert "Avakhada Chakra" in md
+    assert "Life Prediction" in md
+    assert "At a glance" in md
+    assert "Technical basis" in md
+    assert "How to read verdicts" in md or "Supported" in md
     assert len(md) > 500
 
 

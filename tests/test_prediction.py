@@ -31,6 +31,11 @@ def test_generate_prediction():
     assert rk["avakhada"]["gana"] in ("Deva", "Manushya", "Rakshasa")
     assert len(rk["navaratna"]["breakdown"]) == 7
     assert pred["timing"]["guru_gochar"]
+    nar = pred["narrative"]
+    assert nar["overview"] and len(nar["overview"]) >= 4
+    assert "Health" in nar["deep_dives"]
+    assert nar["deep_dives"]["Health"]
+    assert "weak_planets" in pred
     print("Nakshatra:", pred["panchang_at_birth"]["nakshatra"])
     print("Navaratna:", rk["navaratna"]["verdict"], rk["navaratna"]["percent"])
     print("Areas:", len(pred["life_predictions"]))
@@ -44,6 +49,8 @@ def test_predict_from_birth():
     assert "At a glance" in md
     assert "Technical basis" in md
     assert "How to read verdicts" in md or "Supported" in md
+    assert "Your reading in plain words" in md
+    assert "Ask about a specific area" in md
     assert len(md) > 500
 
 

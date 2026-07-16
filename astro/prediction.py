@@ -25,6 +25,7 @@ from .interpret import (
 from .dasha_calc import compute_vimshottari, current_dasha, starting_nakshatra, sade_sati_status
 from .rishikesh_prediction import analyze_rishikesh_birth
 from . import friendly_report as fr
+from .narrative import build_narrative
 
 
 def _birth_datetime(chart: Chart) -> datetime:
@@ -205,12 +206,32 @@ def generate_prediction(
              "rationale": r["rationale"][:120]}
             for r in remedies[:4]
         ],
+        "weak_planets": foundation["debilitated"],
     }
     # Rebuild summary now that life_predictions exist.
     result["summary"] = fr.build_summary(
         result["name"], life_predictions, rishikesh["navaratna"]["percent"], intent,
     )
     result["opening"] = result["summary"]
+    # Plain-talk narrative (to-the-point synthesis + per-area deep dives).
+    result["narrative"] = build_narrative(
+        name=result["name"],
+        lagna=chart.lagna_sign,
+        moon_sign=moon.sign,
+        nakshatra=moon.nakshatra,
+        pada=moon.nakshatra_pada,
+        nav_percent=rishikesh["navaratna"]["percent"],
+        nav_verdict=rishikesh["navaratna"]["verdict"],
+        houses=houses,
+        timing=timing,
+        weak_planets=foundation["debilitated"],
+        nadi=av["nadi"],
+        nadi_meaning=av.get("nadi_meaning", ""),
+        yoga_name=panch.yoga.name,
+        yoga_quality=rishikesh["limbs"]["yoga"]["quality"],
+        yoga_note=rishikesh["limbs"]["yoga"]["note"],
+        nak_data=nak,
+    )
     return fr.enrich_prediction(result, {
         "day": b.day, "month": b.month, "year": b.year,
         "hour": b.hour, "minute": b.minute, "place": b.place,
@@ -239,6 +260,16 @@ def prediction_markdown(pred: Dict) -> str:
     for line in pred.get("birth_intro", []):
         lines.append(f"- {line}")
     lines.append("")
+
+    narrative = pred.get("narrative")
+    if narrative:
+        lines.append("## Your reading in plain words")
+        for heading, text in narrative["overview"]:
+            lines += [f"### {heading}", text, ""]
+        lines.append("## Ask about a specific area")
+        for area, text in narrative["deep_dives"].items():
+            lines += [f"### {area}", text, ""]
+        lines += [f"> {narrative['disclaimer']}", ""]
 
     groups = pred.get("groups", fr.group_predictions(pred["life_predictions"]))
     section_map = [

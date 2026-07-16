@@ -62,6 +62,41 @@ def _render_life_block(lp: dict, theme: str, heading_level: str = "###") -> None
         st.caption(f"Technical basis: {technical}")
 
 
+def _render_narrative(pred: dict, theme: str, heading: str) -> None:
+    """To-the-point plain-talk reading + per-area deep dives (like an astrologer talking)."""
+    narrative = pred.get("narrative")
+    if not narrative:
+        return
+    st.markdown(f"{heading} Your reading in plain words")
+    for sub_heading, text in narrative["overview"]:
+        if theme == "horoscope":
+            st.markdown(
+                _wrap(
+                    theme,
+                    f"<b style='font-size:16px;color:#ffe9a8'>{sub_heading}</b>"
+                    f"<div style='margin-top:8px;line-height:1.6'>{text}</div>",
+                ),
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(f"**{sub_heading}**")
+            st.markdown(text)
+
+    deep = narrative.get("deep_dives", {})
+    if deep:
+        st.markdown("_Want to go deeper on one area? Pick it below._")
+        area = st.selectbox(
+            "Ask about a specific area",
+            list(deep.keys()),
+            key=f"narrative_area_{theme}",
+        )
+        if theme == "horoscope":
+            st.markdown(_wrap(theme, deep[area]), unsafe_allow_html=True)
+        else:
+            st.markdown(deep[area])
+    st.caption(narrative.get("disclaimer", ""))
+
+
 def render_prediction_results(
     pred: dict,
     *,
@@ -106,6 +141,8 @@ def render_prediction_results(
 
     for line in pred.get("birth_intro", []):
         st.markdown(f"- {line}")
+
+    _render_narrative(pred, theme, heading)
 
     if rk and show_technical_panchang:
         nav = rk["navaratna"]

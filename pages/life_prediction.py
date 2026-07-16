@@ -74,7 +74,7 @@ with st.form("prediction_form"):
             "Date of birth",
             value=date(1990, 1, 1),
             min_value=date(1800, 1, 1),
-            max_value=date.today(),
+            max_value=date(2100, 12, 31),
         )
         b_time = st.time_input("Time of birth", value=time(12, 0), step=60)
     with c2:

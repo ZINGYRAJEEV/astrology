@@ -63,7 +63,7 @@ def _birth_panel(title: str, prefix: str):
             "Date of birth",
             value=date(1990, 1, 1),
             min_value=date(1800, 1, 1),
-            max_value=date.today(),
+            max_value=date(2100, 12, 31),
             key=f"{prefix}_date",
         )
     with c2:

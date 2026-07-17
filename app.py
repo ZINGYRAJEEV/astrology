@@ -10,6 +10,11 @@ pg = st.navigation([
         default=True,
     ),
     st.Page(
+        "pages/today_dashboard.py",
+        title="Today for You",
+        icon="\U0001f31e",
+    ),
+    st.Page(
         "pages/daily_panchang.py",
         title="Daily Panchang",
         icon="\U0001f4c5",

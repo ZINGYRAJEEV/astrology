@@ -13,6 +13,23 @@ from typing import Dict, List, Optional, Tuple
 
 from . import reference as ref
 from .chart_engine import Chart
+from .strength_calc import all_strengths
+
+PLANET_KEYWORD = {
+    "Sun": "authority & vitality", "Moon": "emotions & the mind",
+    "Mars": "drive & courage", "Mercury": "intellect & communication",
+    "Jupiter": "wisdom & fortune", "Venus": "love & artistry",
+    "Saturn": "discipline & endurance", "Rahu": "ambition & the unconventional",
+    "Ketu": "detachment & spirituality",
+}
+
+_KENDRA_TRIKONA = {1, 4, 5, 7, 9, 10}
+_UPACHAYA = {11}
+_DUSTHANA = {6, 8, 12}
+
+
+def _ordinal(n: int) -> str:
+    return {1: "1st", 2: "2nd", 3: "3rd"}.get(n, f"{n}th")
 
 # ---------------------------------------------------------------------------
 # Planet-in-house (Bhava Phala) — significance / merits / demerits
@@ -510,6 +527,45 @@ CONJUNCTIONS: Dict[Tuple[str, str], Dict[str, str]] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Three-planet combinations (curated stelliums) — keyed by a sorted triple.
+# ---------------------------------------------------------------------------
+THREE_PLANET: Dict[Tuple[str, str, str], Dict[str, str]] = {
+    ("Mercury", "Sun", "Venus"): {"name": "Sun-Mercury-Venus",
+        "significance": "Authority, intellect and artistry together — refined, expressive, capable.",
+        "merits": "Intelligence, communication, artistic and diplomatic skill, status.",
+        "demerits": "Combustion can weaken Mercury/Venus; ego or indulgence in expression."},
+    ("Mercury", "Moon", "Venus"): {"name": "Moon-Mercury-Venus",
+        "significance": "A charming, artistic and communicative temperament with emotional refinement.",
+        "merits": "Charisma, creativity, eloquence, warm relationships.",
+        "demerits": "Over-sensitivity, indulgence, scattered focus."},
+    ("Jupiter", "Mars", "Sun"): {"name": "Sun-Mars-Jupiter",
+        "significance": "Fiery leadership guided by wisdom — a dharmic commander.",
+        "merits": "Courage, righteous authority, drive, prosperity.",
+        "demerits": "Pride, aggression, dogmatism, burnout."},
+    ("Jupiter", "Mercury", "Venus"): {"name": "Mercury-Venus-Jupiter",
+        "significance": "Learning, art and wisdom combined — ideal for teaching and the arts.",
+        "merits": "Scholarship, refinement, ethics, wealth, eloquence.",
+        "demerits": "Indecision, over-indulgence, idealism."},
+    ("Mars", "Rahu", "Saturn"): {"name": "Mars-Saturn-Rahu",
+        "significance": "Intense, karmically heavy energy — relentless but harsh.",
+        "merits": "Endurance, fearless work, capacity in crises and heavy industry.",
+        "demerits": "Accidents, anxiety, conflict, ruthless or destructive drive."},
+    ("Mercury", "Moon", "Sun"): {"name": "Sun-Moon-Mercury",
+        "significance": "Will, emotion and intellect fused (near new moon) — self-directed.",
+        "merits": "Focus, communication, self-reliance.",
+        "demerits": "Inner ego-emotion tension, restlessness, combustion effects."},
+}
+
+
+def _triple_key(a: str, b: str, c: str) -> Tuple[str, str, str]:
+    return tuple(sorted((a, b, c)))  # type: ignore[return-value]
+
+
+def three_planet(a: str, b: str, c: str) -> Optional[Dict[str, str]]:
+    return THREE_PLANET.get(_triple_key(a, b, c))
+
+
 def _pair_key(a: str, b: str) -> Tuple[str, str]:
     return tuple(sorted((a, b)))  # type: ignore[return-value]
 
@@ -522,29 +578,136 @@ def conjunction(a: str, b: str) -> Optional[Dict[str, str]]:
     return CONJUNCTIONS.get(_pair_key(a, b))
 
 
+def _dignity_modifier(dignity: str) -> Tuple[str, str]:
+    """(state, note) describing how dignity re-colours a placement."""
+    if dignity in ("Exalted", "Own Sign", "Moolatrikona"):
+        return ("strengthened", "This placement is strong (dignified), so its merits "
+                "express fully and the watch-outs stay mild.")
+    if dignity in ("Debilitated", "Enemy's Sign"):
+        return ("weakened", "This placement is under strain (undignified), so the "
+                "watch-outs need care and the merits come with extra effort.")
+    return ("moderate", "This placement is moderate in strength, giving steady, "
+            "ordinary results.")
+
+
+def _house_quality(to_house: int, dignity: str) -> str:
+    if to_house in _DUSTHANA:
+        base = "challenging"
+    elif to_house in _KENDRA_TRIKONA or to_house in _UPACHAYA:
+        base = "favourable"
+    else:
+        base = "mixed"
+    if dignity in ("Exalted", "Own Sign", "Moolatrikona") and base != "favourable":
+        base += " (helped by strong dignity)"
+    elif dignity in ("Debilitated", "Enemy's Sign") and base == "favourable":
+        base += " (dented by weak dignity)"
+    return base
+
+
+def house_lord_placements(chart: Chart) -> List[Dict]:
+    """Lord of each house and the house it occupies (Bhavesh-in-Bhava)."""
+    strengths = all_strengths(chart)
+    out: List[Dict] = []
+    for h in range(1, 13):
+        sign = chart.house_signs[h]
+        lord = ref.SIGN_LORD[sign]
+        to_house = chart.planet_house(lord)
+        from_matters = ref.HOUSE_THEME.get(h, "")
+        to_matters = ref.HOUSE_THEME.get(to_house, "")
+        dignity = strengths[lord].dignity
+        quality = _house_quality(to_house, dignity)
+        effect = (f"The lord of the {_ordinal(h)} house ({lord}, {dignity.lower()}) is "
+                  f"placed in the {_ordinal(to_house)} house.")
+        meaning = (f"Your {from_matters} are channelled toward {to_matters} — "
+                   f"a {quality} direction for this area of life.")
+        out.append({
+            "from_house": h,
+            "to_house": to_house,
+            "lord": lord,
+            "sign": sign,
+            "dignity": dignity,
+            "quality": quality,
+            "from_matters": from_matters,
+            "to_matters": to_matters,
+            "effect": effect,
+            "meaning": meaning,
+        })
+    return out
+
+
+def house_lord_generic(from_house: int, to_house: int) -> Dict:
+    """Chart-free meaning of 'lord of house X placed in house Y'."""
+    from_matters = ref.HOUSE_THEME.get(from_house, "")
+    to_matters = ref.HOUSE_THEME.get(to_house, "")
+    quality = _house_quality(to_house, "Neutral's Sign")
+    return {
+        "from_house": from_house,
+        "to_house": to_house,
+        "from_matters": from_matters,
+        "to_matters": to_matters,
+        "quality": quality,
+        "effect": (f"The lord of the {_ordinal(from_house)} house placed in the "
+                   f"{_ordinal(to_house)} house."),
+        "meaning": (f"The matters of {from_matters} are directed toward {to_matters} — "
+                    f"a {quality} placement. When the {_ordinal(from_house)} lord is strong "
+                    "and well-aspected, this expresses at its best."),
+    }
+
+
+def _stellium_description(names: List[str], house: int, sign: str) -> Dict:
+    curated = None
+    if len(names) == 3:
+        curated = three_planet(*names)
+    theme = ref.HOUSE_THEME.get(house, "")
+    blended = ", ".join(PLANET_KEYWORD.get(n, n) for n in names)
+    if curated:
+        return {
+            "name": curated["name"],
+            "significance": curated["significance"],
+            "merits": curated["merits"],
+            "demerits": curated["demerits"],
+            "curated": True,
+        }
+    return {
+        "name": f"{'-'.join(names)} stellium",
+        "significance": (f"A stellium of {len(names)} planets in the {_ordinal(house)} "
+                         f"house puts intense focus on {theme}. Blended energies: {blended}."),
+        "merits": "Concentrated strength and talent in this area of life.",
+        "demerits": "Over-emphasis here can unbalance other areas; mixed planets can clash.",
+        "curated": False,
+    }
+
+
 def chart_combinations(chart: Chart) -> Dict:
-    """Actual placements and conjunctions present in a chart."""
+    """Actual placements, conjunctions, stelliums and house-lords in a chart."""
+    strengths = all_strengths(chart)
     placements: List[Dict] = []
     for name in ref.PLANETS:
         p = chart.planets[name]
         info = planet_in_house(name, p.house) or {}
+        dignity = strengths[name].dignity
+        state, dignity_note = _dignity_modifier(dignity)
         placements.append({
             "planet": name,
             "house": p.house,
             "house_name": ref.HOUSE_NAME.get(p.house, ""),
             "sign": p.sign,
             "retrograde": p.retrograde,
+            "dignity": dignity,
+            "dignity_state": state,
+            "dignity_note": dignity_note,
             "effect": info.get("effect", ""),
             "merits": info.get("merits", ""),
             "demerits": info.get("demerits", ""),
         })
 
-    # Conjunctions: planets sharing a house.
+    # Group planets by house for conjunctions and stelliums.
     by_house: Dict[int, List[str]] = {}
     for name in ref.PLANETS:
         by_house.setdefault(chart.planets[name].house, []).append(name)
 
     conjunctions: List[Dict] = []
+    stelliums: List[Dict] = []
     for house, names in sorted(by_house.items()):
         if len(names) < 2:
             continue
@@ -564,4 +727,19 @@ def chart_combinations(chart: Chart) -> Dict:
                     "demerits": (info or {}).get("demerits", ""),
                     "curated": info is not None,
                 })
-    return {"placements": placements, "conjunctions": conjunctions}
+        if len(names) >= 3:
+            desc = _stellium_description(names, house, chart.planets[names[0]].sign)
+            desc.update({
+                "planets": tuple(names),
+                "house": house,
+                "house_name": ref.HOUSE_NAME.get(house, ""),
+                "sign": chart.planets[names[0]].sign,
+            })
+            stelliums.append(desc)
+
+    return {
+        "placements": placements,
+        "conjunctions": conjunctions,
+        "stelliums": stelliums,
+        "house_lords": house_lord_placements(chart),
+    }

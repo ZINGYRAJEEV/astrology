@@ -7,7 +7,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from astro.chart_engine import BirthData, compute_chart
 from astro.combinations import (
-    CONJUNCTIONS, PLANET_IN_HOUSE, chart_combinations, conjunction, planet_in_house,
+    CONJUNCTIONS, PLANET_IN_HOUSE, THREE_PLANET, chart_combinations, conjunction,
+    house_lord_generic, planet_in_house, three_planet,
 )
 from astro import reference as ref
 
@@ -48,10 +49,39 @@ def test_chart_combinations_structure():
     for p in data["placements"]:
         assert 1 <= p["house"] <= 12
         assert p["effect"]
+        assert p["dignity"] and p["dignity_state"] and p["dignity_note"]
     for c in data["conjunctions"]:
         assert len(c["planets"]) == 2
         assert c["significance"]
         assert c["planets"][0] != c["planets"][1]
+    for s in data["stelliums"]:
+        assert len(s["planets"]) >= 3
+        assert s["significance"]
+
+
+def test_house_lords_complete():
+    chart = compute_chart(BIRTH)
+    lords = chart_combinations(chart)["house_lords"]
+    assert len(lords) == 12
+    for d in lords:
+        assert 1 <= d["from_house"] <= 12
+        assert 1 <= d["to_house"] <= 12
+        assert d["lord"] in ref.PLANETS
+        assert d["quality"] and d["meaning"]
+
+
+def test_three_planet_lookup_and_keys():
+    for key in THREE_PLANET:
+        assert list(key) == sorted(key), key
+        assert three_planet(*key) is not None
+    # Order independence.
+    assert three_planet("Venus", "Sun", "Mercury") == three_planet("Sun", "Mercury", "Venus")
+
+
+def test_house_lord_generic():
+    d = house_lord_generic(5, 10)
+    assert d["from_house"] == 5 and d["to_house"] == 10
+    assert d["quality"] and d["meaning"]
 
 
 if __name__ == "__main__":
@@ -60,4 +90,7 @@ if __name__ == "__main__":
     test_conjunction_keys_sorted()
     test_planet_in_house_lookup()
     test_chart_combinations_structure()
+    test_house_lords_complete()
+    test_three_planet_lookup_and_keys()
+    test_house_lord_generic()
     print("Combinations tests passed.")

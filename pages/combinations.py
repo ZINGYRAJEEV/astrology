@@ -13,7 +13,8 @@ from astro import persistence
 from astro import reference as ref
 from astro.chart_engine import BirthData, compute_chart
 from astro.combinations import (
-    CONJUNCTIONS, chart_combinations, conjunction, planet_in_house,
+    CONJUNCTIONS, THREE_PLANET, chart_combinations, conjunction,
+    house_lord_generic, planet_in_house, three_planet,
 )
 
 st.set_page_config(page_title="Planetary Combinations", page_icon="\U0001fa90", layout="wide")
@@ -69,8 +70,23 @@ def _conj_card(name: str, planets, significance: str, merits: str, demerits: str
     st.markdown(f"<div class='pcard'>{body}</div>", unsafe_allow_html=True)
 
 
-tab_explore, tab_conj, tab_chart = st.tabs(
-    ["Planet in a house", "Two-planet conjunctions", "In my chart"]
+def _lord_card(d: dict, extra: str = ""):
+    qcolour = ("#6fcf97" if d["quality"].startswith("favourable")
+               else "#eb5757" if d["quality"].startswith("challenging") else "#f2c94c")
+    st.markdown(
+        f"<div class='pcard'>"
+        f"<span class='tag'>{d['effect']}{(' · ' + extra) if extra else ''}</span>"
+        f"<div><b style='color:#ffe9a8'>{d['from_matters'].capitalize()}</b> &rarr; "
+        f"<b style='color:#ffe9a8'>{d['to_matters']}</b> &nbsp;·&nbsp; "
+        f"<b style='color:{qcolour}'>{d['quality']}</b></div>"
+        f"<div style='margin-top:6px'>{d['meaning']}</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+
+tab_explore, tab_conj, tab_lords, tab_chart = st.tabs(
+    ["Planet in a house", "Conjunctions & stelliums", "House lords", "In my chart"]
 )
 
 # ---------------------------------------------------------------------------
@@ -115,11 +131,56 @@ with tab_conj:
                 "placement in the first tab."
             )
 
+    st.markdown("### Three-planet combinations (stelliums)")
+    cols = st.columns(3)
+    picks = []
+    for i, col in enumerate(cols):
+        with col:
+            picks.append(st.selectbox(f"Planet {i+1}", ref.PLANETS, index=i, key=f"tp_{i}"))
+    if len(set(picks)) < 3:
+        st.info("Pick three different planets.")
+    else:
+        tinfo = three_planet(*picks)
+        if tinfo:
+            _conj_card(tinfo["name"], tuple(picks), tinfo["significance"],
+                       tinfo["merits"], tinfo["demerits"])
+        else:
+            st.warning(
+                f"No curated note for {' + '.join(picks)}. When three planets share a "
+                "house they form a stellium — a strong concentration of their blended "
+                "energies in that house's affairs."
+            )
+
     st.markdown("### All classical conjunctions")
     st.caption("The famous yogas formed when two planets sit together.")
     for (a, b), info in CONJUNCTIONS.items():
         _conj_card(info["name"], (a, b), info["significance"],
                    info["merits"], info["demerits"])
+
+    st.markdown("### Curated three-planet combinations")
+    for triple, info in THREE_PLANET.items():
+        _conj_card(info["name"], triple, info["significance"],
+                   info["merits"], info["demerits"])
+
+# ---------------------------------------------------------------------------
+with tab_lords:
+    st.markdown("### House-lord placements (Bhavesh in Bhava)")
+    st.caption("The lord of a house carries that house's matters into wherever it sits — "
+               "a core building block of chart reading.")
+    c1, c2 = st.columns(2)
+    with c1:
+        from_h = st.selectbox("Lord of which house?", list(range(1, 13)),
+                              format_func=lambda h: f"House {h} — {ref.HOUSE_NAME.get(h,'')}",
+                              key="hl_from")
+    with c2:
+        to_h = st.selectbox("Placed in which house?", list(range(1, 13)),
+                            format_func=lambda h: f"House {h} — {ref.HOUSE_NAME.get(h,'')}",
+                            key="hl_to")
+    _lord_card(house_lord_generic(from_h, to_h))
+
+    with st.expander(f"See the {ref.HOUSE_NAME.get(from_h,'')} lord through all 12 houses"):
+        for h in range(1, 13):
+            _lord_card(house_lord_generic(from_h, h))
 
 # ---------------------------------------------------------------------------
 with tab_chart:
@@ -177,13 +238,26 @@ with tab_chart:
         native = chart.birth.name or "Native"
 
         st.markdown(f"#### {native} — planet placements")
+        st.caption("Each placement is re-coloured by the planet's dignity (its sign strength).")
         for p in data["placements"]:
+            dstate = {"strengthened": "#6fcf97", "weakened": "#eb5757",
+                      "moderate": "#f2c94c"}.get(p["dignity_state"], "#f2c94c")
             _placement_card(
                 p["planet"] + (" (retrograde)" if p["retrograde"] else ""),
                 p["house"],
-                {"effect": f"In {p['sign']}. {p['effect']}",
+                {"effect": f"In {p['sign']} ({p['dignity']}). {p['effect']}",
                  "merits": p["merits"], "demerits": p["demerits"]},
             )
+            st.markdown(
+                f"<div style='margin:-8px 0 12px 4px;color:{dstate};font-size:13px'>"
+                f"↳ {p['dignity_note']}</div>",
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("#### House-lord placements")
+        st.caption("Where each house's ruler sits — and how its matters are directed.")
+        for d in data["house_lords"]:
+            _lord_card(d, extra=f"{d['lord']} in House {d['to_house']}")
 
         st.markdown("#### Conjunctions in your chart")
         if not data["conjunctions"]:
@@ -193,6 +267,14 @@ with tab_chart:
                 c["name"], c["planets"], c["significance"], c["merits"], c["demerits"],
                 where=f"House {c['house']} ({c['house_name']}) · {c['sign']}",
             )
+
+        if data["stelliums"]:
+            st.markdown("#### Stelliums (3+ planets together)")
+            for s in data["stelliums"]:
+                _conj_card(
+                    s["name"], s["planets"], s["significance"], s["merits"], s["demerits"],
+                    where=f"House {s['house']} ({s['house_name']}) · {s['sign']}",
+                )
 
 st.caption(
     "Reference guidance · results are modulated by sign, dignity, aspects and Dasha. "

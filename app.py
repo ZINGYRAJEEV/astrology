@@ -20,6 +20,11 @@ pg = st.navigation([
         icon="\U0001f52e",
     ),
     st.Page(
+        "pages/muhurta_finder.py",
+        title="Muhurta Finder",
+        icon="\U0001f550",
+    ),
+    st.Page(
         "pages/horoscope_matching.py",
         title="Horoscope Matching",
         icon="\U0001f491",

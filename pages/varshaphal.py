@@ -99,7 +99,7 @@ st.markdown(
     f"<b style='color:#ffe9a8'>Muntha:</b> {vp['muntha_sign']} in house {vp['muntha_house']} "
     f"(lord {vp['muntha_lord']})<br>"
     f"<b style='color:#ffe9a8'>Year lord (Varshesh):</b> {vp['year_lord']} "
-    f"— {vp['year_lord_role']} ({vp['year_lord_dignity']})"
+    f"— {vp['year_lord_role']} ({vp['year_lord_bala']} virupas)"
     f"</div>",
     unsafe_allow_html=True,
 )
@@ -107,6 +107,23 @@ st.markdown(
 st.markdown("### Highlights")
 for h in vp["highlights"]:
     st.markdown(f"- {h}")
+
+st.markdown("### Office-bearers — Panchavargeeya Bala")
+st.caption("The Varshesh is the office-bearer with the greatest five-fold Tajika strength.")
+bala_rows = []
+for c in vp["office_bearers"]:
+    b = c["bala"]
+    bala_rows.append({
+        "Role": c["role"],
+        "Planet": c["planet"] + (" \u25c0 Varshesh" if c["planet"] == vp["year_lord"] else ""),
+        "Kshetra": b["kshetra"],
+        "Uchcha": b["uchcha"],
+        "Hadda": b["hadda"],
+        "Drekkana": b["drekkana"],
+        "Navamsha": b["navamsha"],
+        "Total": b["total"],
+    })
+st.dataframe(bala_rows, hide_index=True, use_container_width=True)
 
 st.markdown("### Annual chart positions")
 rows = []
@@ -136,6 +153,6 @@ st.download_button(
 )
 
 st.caption(
-    "Tajika annual system · the year-lord uses a simplified strength proxy. "
+    "Tajika annual system · year-lord selected by Panchavargeeya Bala. "
     "For reflection and guidance."
 )

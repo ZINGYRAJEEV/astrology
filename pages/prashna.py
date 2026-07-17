@@ -94,6 +94,17 @@ if st.button("Cast the chart & answer", type="primary", use_container_width=True
     for r in res["reasons"]:
         st.markdown(f"- {r}")
 
+    if res.get("yogas"):
+        st.markdown("### Tajika yogas (how the significators connect)")
+        tone = {"Ithasala": "#6fcf97", "Nakta": "#f2c94c", "Ishrafa": "#eb5757"}
+        for y in res["yogas"]:
+            c = tone.get(y["type"], "#9aa4bf")
+            st.markdown(
+                f"<div class='pcard'><b style='color:{c}'>{y['type']}</b> "
+                f"({' & '.join(y['planets'])}) — {y['reason']}</div>",
+                unsafe_allow_html=True,
+            )
+
     st.markdown(f"**Timing:** {res['timing']}")
 
     st.caption(

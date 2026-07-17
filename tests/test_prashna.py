@@ -22,6 +22,7 @@ def test_all_question_types_run():
         assert res["moon_sign"] in ref.SIGNS
         assert res["reasons"]
         assert res["timing"]
+        assert isinstance(res["yogas"], list)
 
 
 def test_deterministic():

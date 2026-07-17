@@ -15,6 +15,7 @@ from . import reference as ref
 from .chart_engine import BirthData, Chart, compute_chart
 from .strength_calc import all_strengths
 from .aspects import aspects_on_house
+from .tajika import prashna_yogas
 
 _KENDRA_TRIKONA = {1, 4, 5, 7, 9, 10}
 _UPACHAYA = {11}
@@ -104,6 +105,14 @@ def _timing_hint(chart: Chart, house: int) -> str:
     return "Dual sign involved — moderate timing, possibly in stages."
 
 
+def _find_yoga(yogas: List[Dict], a: str, b: str) -> Dict:
+    for y in yogas:
+        pair = set(y["planets"])
+        if a in pair and b in pair:
+            return y
+    return {}
+
+
 def _verdict(pct: float) -> str:
     if pct >= 62:
         return "Favourable"
@@ -140,16 +149,19 @@ def answer_prashna(
     primary = cfg["primary"]
     mode = cfg["mode"]
 
-    if mode == "health":
-        q1, r1 = _house_quality(chart, strengths, 1)
-        q6, r6 = _house_quality(chart, strengths, 6)
-        raw = 0.7 * q1 + moon_score + 0.6 * lagna_score - 0.8 * q6
-        reasons.append("Health favours a strong 1st house/Moon and a weak 6th (disease) house")
-    elif mode == "litigation":
-        q1, r1 = _house_quality(chart, strengths, 1)
-        q6, r6 = _house_quality(chart, strengths, 6)
-        raw = q1 + moon_score + 0.5 * lagna_score - 0.9 * q6
-        reasons.append("You (1st) vs the opponent (6th/7th) — a stronger 1st favours you")
+    sixth_lord = chart.house_lord(6)
+    if mode in ("health", "litigation"):
+        q1, _ = _house_quality(chart, strengths, 1)
+        q6, _ = _house_quality(chart, strengths, 6)
+        if mode == "health":
+            raw = 0.7 * q1 + moon_score + 0.6 * lagna_score - 0.8 * q6
+            reasons.append("Health favours a strong 1st house/Moon and a weak 6th (disease) house")
+        else:
+            raw = q1 + moon_score + 0.5 * lagna_score - 0.9 * q6
+            reasons.append("You (1st) vs the opponent (6th) — a stronger 1st favours you")
+        significators = [lagna_lord, "Moon", sixth_lord]
+        key_pair = (lagna_lord, sixth_lord)
+        inverted = True  # a connection to the 6th (disease/opponent) is adverse
     else:
         ph_score, ph_reasons = _house_quality(chart, strengths, primary)
         reasons += ph_reasons
@@ -158,6 +170,24 @@ def answer_prashna(
             s, _ = _house_quality(chart, strengths, h)
             support_score += 0.4 * s
         raw = ph_score + 0.5 * support_score + 0.6 * moon_score + 0.4 * lagna_score
+        matter_lord = chart.house_lord(primary)
+        significators = [lagna_lord, matter_lord, "Moon"]
+        # For a "general" question the matter lord == lagna lord; use the Moon.
+        key_pair = (lagna_lord, matter_lord) if matter_lord != lagna_lord else (lagna_lord, "Moon")
+        inverted = False
+
+    # ---- Tajika yogas (Ithasala / Ishrafa / Nakta) -----------------------
+    yogas = prashna_yogas(chart, list(dict.fromkeys(significators)))
+    key = _find_yoga(yogas, key_pair[0], key_pair[1])
+    if key.get("type") == "Ithasala":
+        raw += -0.9 if inverted else 0.9
+        reasons.append(key["reason"])
+    elif key.get("type") == "Ishrafa":
+        raw += 0.5 if inverted else -0.5
+        reasons.append(key["reason"])
+    elif key.get("type") == "Nakta":
+        raw += -0.4 if inverted else 0.4
+        reasons.append(key["reason"])
 
     pct = max(5.0, min(95.0, 50.0 + raw * 8.0))
     verdict = _verdict(pct)
@@ -173,6 +203,7 @@ def answer_prashna(
         "score": round(pct, 1),
         "verdict": verdict,
         "reasons": reasons,
+        "yogas": yogas,
         "timing": _timing_hint(chart, primary),
         "chart": chart,
     }

@@ -19,14 +19,10 @@ import swisseph as swe
 from . import reference as ref
 from .chart_engine import BirthData, Chart, compute_chart
 from .strength_calc import all_strengths
+from .panchavargeeya import panchavargeeya_bala, trirashi_pati
 
 _FLAGS = swe.FLG_MOSEPH | swe.FLG_SIDEREAL
 _SUN_SPEED = 0.98565  # mean degrees/day
-
-_DIGNITY_SCORE = {
-    "Exalted": 5, "Moolatrikona": 4, "Own Sign": 3, "Friend's Sign": 2,
-    "Neutral's Sign": 1, "Enemy's Sign": 0, "Debilitated": -1,
-}
 
 HOUSE_THEME = {
     1: "self, health & fresh initiative",
@@ -76,16 +72,31 @@ def _annual_chart(chart: Chart, sr_local: datetime) -> Chart:
     return compute_chart(annual_birth)
 
 
+def _aspects_lagna(annual: Chart, planet: str) -> bool:
+    """True if the planet occupies or casts a full aspect on the annual Lagna."""
+    from .aspects import aspects_on_house
+    if annual.planet_house(planet) == 1:
+        return True
+    return any(a["planet"] == planet for a in aspects_on_house(annual, 1))
+
+
 def _select_year_lord(annual: Chart, candidates: List[Dict]) -> Dict:
-    strengths = all_strengths(annual)
-    best = None
+    """Varshesh = the office-bearer with the greatest Panchavargeeya Bala.
+
+    Tradition prefers a candidate related to the annual Lagna, so a lord that
+    aspects/occupies the Lagna wins ties and is noted.
+    """
     for c in candidates:
-        dig = strengths[c["planet"]].dignity
-        score = _DIGNITY_SCORE.get(dig, 1)
-        c["dignity"] = dig
-        c["score"] = score
-        if best is None or score > best["score"]:
-            best = c
+        bala = panchavargeeya_bala(c["planet"], annual)
+        c["bala"] = bala
+        c["total"] = bala["total"]
+        c["aspects_lagna"] = _aspects_lagna(annual, c["planet"])
+        c["dignity"] = all_strengths(annual)[c["planet"]].dignity
+
+    best = max(
+        candidates,
+        key=lambda c: (c["total"], c["aspects_lagna"]),
+    )
     return best
 
 
@@ -105,18 +116,20 @@ def varshaphal(chart: Chart, year: int) -> Dict:
     is_day = sun_house in {7, 8, 9, 10, 11, 12}
     luminary = "Sun" if is_day else "Moon"
 
+    trirashi = trirashi_pati(annual.lagna_sign, is_day)
     candidates = [
-        {"role": "Muntha lord", "planet": muntha_lord},
-        {"role": "Year-Ascendant lord", "planet": ref.SIGN_LORD[annual.lagna_sign]},
-        {"role": "Birth-Ascendant lord", "planet": ref.SIGN_LORD[chart.lagna_sign]},
-        {"role": f"Luminary lord ({'day' if is_day else 'night'})", "planet": luminary},
+        {"role": "Muntha lord (Munthesh)", "planet": muntha_lord},
+        {"role": "Annual-Ascendant lord (Varsha Lagnesh)", "planet": ref.SIGN_LORD[annual.lagna_sign]},
+        {"role": "Birth-Ascendant lord (Janma Lagnesh)", "planet": ref.SIGN_LORD[chart.lagna_sign]},
+        {"role": f"Triplicity lord (Trirashi-pati, {'day' if is_day else 'night'})", "planet": trirashi},
+        {"role": f"Day/Night lord (Dinaratri-pati, {'day' if is_day else 'night'})", "planet": luminary},
     ]
     # De-duplicate planets, keeping the highest-priority role.
-    seen, uniq = set(), []
+    seen, uniq = {}, []
     for c in candidates:
         if c["planet"] in seen:
             continue
-        seen.add(c["planet"])
+        seen[c["planet"]] = True
         uniq.append(c)
     year_lord = _select_year_lord(annual, uniq)
 
@@ -135,8 +148,11 @@ def varshaphal(chart: Chart, year: int) -> Dict:
     highlights: List[str] = [
         f"Muntha in house {muntha_house} ({muntha_sign}) — the year emphasises "
         f"{HOUSE_THEME[muntha_house]}.",
-        f"Year lord (Varshesh): {year_lord['planet']} ({year_lord['dignity'].lower()} "
-        f"in the annual chart) as {year_lord['role']}.",
+        f"Year lord (Varshesh): {year_lord['planet']} as {year_lord['role']} — "
+        f"strongest office-bearer with {year_lord['total']} virupas of "
+        f"Panchavargeeya Bala"
+        + (", and it aspects the annual Ascendant."
+           if year_lord["aspects_lagna"] else "."),
     ]
     benefics_kendra = [
         p["planet"] for p in annual_planets
@@ -163,6 +179,7 @@ def varshaphal(chart: Chart, year: int) -> Dict:
         "year_lord": year_lord["planet"],
         "year_lord_role": year_lord["role"],
         "year_lord_dignity": year_lord["dignity"],
+        "year_lord_bala": year_lord["total"],
         "office_bearers": uniq,
         "annual_planets": annual_planets,
         "highlights": highlights,
@@ -197,16 +214,24 @@ def varshaphal_markdown(vp: Dict, native: str) -> str:
         f"Annual Ascendant: {vp['annual_lagna']} (lord {vp['annual_lagna_lord']})",
         f"Muntha: {vp['muntha_sign']} in house {vp['muntha_house']} (lord {vp['muntha_lord']})",
         f"Year lord (Varshesh): {vp['year_lord']} — {vp['year_lord_role']} "
-        f"({vp['year_lord_dignity']})",
+        f"({vp['year_lord_bala']} virupas)",
         "",
-        "## Highlights",
+        "## Office-bearers (Panchavargeeya Bala)",
+        "",
+        "| Role | Planet | Kshetra | Uchcha | Hadda | Drekkana | Navamsha | Total |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
+    for c in vp["office_bearers"]:
+        b = c["bala"]
+        lines.append(
+            f"| {c['role']} | {c['planet']} | {b['kshetra']} | {b['uchcha']} | "
+            f"{b['hadda']} | {b['drekkana']} | {b['navamsha']} | **{b['total']}** |"
+        )
+    lines += ["", "## Highlights"]
     for h in vp["highlights"]:
         lines.append(f"- {h}")
     lines += ["", "## Month-by-month (Sun transit)"]
     for m in vp["monthly"]:
         lines.append(f"- **From {m['from_date']}** — Sun in {m['sun_sign']} "
                      f"(house {m['house']}): {m['theme']}")
-    lines += ["", "> Year-lord uses a simplified strength proxy (not full "
-              "Panchavargeeya Bala); treat as indicative."]
     return "\n".join(lines)

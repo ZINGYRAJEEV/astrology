@@ -65,6 +65,11 @@ pg = st.navigation([
         icon="\U0001f3af",
     ),
     st.Page(
+        "pages/combinations.py",
+        title="Planetary Combinations",
+        icon="\U0001fa90",
+    ),
+    st.Page(
         "pages/horoscope_matching.py",
         title="Horoscope Matching",
         icon="\U0001f491",

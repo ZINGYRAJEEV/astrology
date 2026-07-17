@@ -27,6 +27,7 @@ from .rishikesh_prediction import analyze_rishikesh_birth
 from . import friendly_report as fr
 from .narrative import build_narrative
 from .yogas import detect_yogas
+from .vargas import reading_highlights
 
 
 def _birth_datetime(chart: Chart) -> datetime:
@@ -209,6 +210,7 @@ def generate_prediction(
         ],
         "weak_planets": foundation["debilitated"],
         "yogas": detect_yogas(chart),
+        "divisional": reading_highlights(chart),
     }
     # Rebuild summary now that life_predictions exist.
     result["summary"] = fr.build_summary(
@@ -268,6 +270,16 @@ def prediction_markdown(pred: Dict) -> str:
         lines.append("## Notable yogas in your chart")
         for y in yogas:
             lines.append(f"- **{y['name']}** ({y['category']}) — {y['detail']}")
+        lines.append("")
+
+    divisional = pred.get("divisional")
+    if divisional:
+        lines.append("## Divisional charts (Vargas)")
+        for d in divisional:
+            vg = (f" · vargottama: {', '.join(d['vargottama'])}"
+                  if d["vargottama"] else "")
+            lines.append(f"- **{d['name']}** — {d['theme']}. Ascendant "
+                         f"{d['lagna_sign']}{vg}. {d['note']}")
         lines.append("")
 
     narrative = pred.get("narrative")

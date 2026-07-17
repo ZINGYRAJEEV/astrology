@@ -80,18 +80,68 @@ def tajika_relation(chart: Chart, a: str, b: str) -> Dict:
                       "opportunity was close but is slipping past."}
 
 
+def _aspects_both(chart: Chart, m: str, a: str, b: str) -> bool:
+    return (_sign_diff(chart, m, a) in _ASPECT_DIFFS
+            and _sign_diff(chart, m, b) in _ASPECT_DIFFS)
+
+
 def transfer_of_light(chart: Chart, a: str, b: str) -> Optional[Dict]:
-    """Nakta yoga — a third fast planet aspecting both significators."""
+    """Nakta yoga — a third *faster* planet aspecting both significators."""
     if _sign_diff(chart, a, b) in _ASPECT_DIFFS:
         return None
     for m in ref.PLANETS:
+        if m in (a, b) or not _aspects_both(chart, m, a, b):
+            continue
+        if _MEAN_SPEED[m] >= _MEAN_SPEED[a] and _MEAN_SPEED[m] >= _MEAN_SPEED[b]:
+            return {"type": "Nakta", "planets": (a, b), "via": m,
+                    "reason": f"Nakta (transfer of light): {m} aspects both {a} and {b} "
+                              "— help arrives through a quick intermediary."}
+    return None
+
+
+def collection_of_light(chart: Chart, a: str, b: str) -> Optional[Dict]:
+    """Yamaya yoga — a third *slower* planet aspected by both significators."""
+    if _sign_diff(chart, a, b) in _ASPECT_DIFFS:
+        return None
+    for m in ref.PLANETS:
+        if m in (a, b) or not _aspects_both(chart, m, a, b):
+            continue
+        if _MEAN_SPEED[m] <= _MEAN_SPEED[a] and _MEAN_SPEED[m] <= _MEAN_SPEED[b]:
+            return {"type": "Yamaya", "planets": (a, b), "via": m,
+                    "reason": f"Yamaya (collection of light): the slower {m} gathers both "
+                              f"{a} and {b} — the matter resolves through a weighty third party."}
+    return None
+
+
+def kamboola(chart: Chart, a: str, b: str) -> Optional[Dict]:
+    """Kamboola — the Moon reinforces an existing Ithasala between a and b."""
+    if "Moon" in (a, b):
+        return None
+    if tajika_relation(chart, a, b).get("type") != "Ithasala":
+        return None
+    moon_deg = chart.planets["Moon"].degree_in_sign
+    for other in (a, b):
+        if _sign_diff(chart, "Moon", other) not in _ASPECT_DIFFS:
+            continue
+        orb = (DEEPTAMSA["Moon"] + DEEPTAMSA[other]) / 2.0
+        if abs(moon_deg - chart.planets[other].degree_in_sign) <= orb:
+            return {"type": "Kamboola", "planets": (a, b), "via": "Moon",
+                    "reason": f"Kamboola: the Moon supports the {a}-{b} Ithasala — "
+                              "a strong blessing that helps the matter succeed."}
+    return None
+
+
+def manau(chart: Chart, a: str, b: str) -> Optional[Dict]:
+    """Manau — a malefic (Mars/Saturn) obstructs an existing Ithasala."""
+    if tajika_relation(chart, a, b).get("type") != "Ithasala":
+        return None
+    for m in ("Saturn", "Mars"):
         if m in (a, b):
             continue
-        if _sign_diff(chart, m, a) in _ASPECT_DIFFS and _sign_diff(chart, m, b) in _ASPECT_DIFFS:
-            if _MEAN_SPEED[m] >= _MEAN_SPEED[a] and _MEAN_SPEED[m] >= _MEAN_SPEED[b]:
-                return {"type": "Nakta", "planets": (a, b), "via": m,
-                        "reason": f"Nakta (transfer of light): {m} aspects both {a} and {b} "
-                                  "— help arrives through an intermediary."}
+        if _aspects_both(chart, m, a, b):
+            return {"type": "Manau", "planets": (a, b), "via": m,
+                    "reason": f"Manau (obstruction): {m} intervenes in the {a}-{b} Ithasala "
+                              "— expect a hurdle or delay before completion."}
     return None
 
 
@@ -106,10 +156,15 @@ def prashna_yogas(chart: Chart, significators: List[str]) -> List[Dict]:
                 continue
             seen.add((a, b))
             rel = tajika_relation(chart, a, b)
-            if rel["type"] in ("Ithasala", "Ishrafa"):
+            if rel["type"] == "Ithasala":
+                yogas.append(rel)
+                for extra in (kamboola(chart, a, b), manau(chart, a, b)):
+                    if extra:
+                        yogas.append(extra)
+            elif rel["type"] == "Ishrafa":
                 yogas.append(rel)
             elif rel["type"] == "none":
-                nakta = transfer_of_light(chart, a, b)
-                if nakta:
-                    yogas.append(nakta)
+                bridge = transfer_of_light(chart, a, b) or collection_of_light(chart, a, b)
+                if bridge:
+                    yogas.append(bridge)
     return yogas

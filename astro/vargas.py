@@ -142,6 +142,46 @@ def all_vargas(chart: Chart) -> Dict[int, Dict]:
     return {v: build_varga_chart(chart, v) for v in VARGAS}
 
 
+_STRONG = {"Exalted", "Own Sign"}
+
+
+def _dignity_phrase(dignity: str) -> str:
+    if dignity in _STRONG:
+        return "is well placed and supports this area strongly"
+    if dignity == "Debilitated":
+        return "is under strain here, so extra effort is needed"
+    return "is workable, giving steady but ordinary results"
+
+
+def reading_highlights(chart: Chart) -> List[Dict]:
+    """Concise divisional-chart notes for the main prediction reading.
+
+    Focuses on the three most-used vargas: D-9 (marriage/dharma),
+    D-10 (career) and D-7 (children), each read through a key significator.
+    """
+    focus = [
+        (9, "marriage, dharma & inner strength", "Venus"),
+        (10, "career, status & profession", chart.house_lord(10)),
+        (7, "children & progeny", "Jupiter"),
+    ]
+    out: List[Dict] = []
+    for varga, theme, sig in focus:
+        vc = build_varga_chart(chart, varga)
+        sig_p = next(p for p in vc["planets"] if p["planet"] == sig)
+        note = (f"{sig} (key for {theme.split(',')[0]}) {_dignity_phrase(sig_p['dignity'])}"
+                f" in this chart.")
+        out.append({
+            "varga": varga,
+            "name": vc["name"],
+            "theme": theme,
+            "lagna_sign": vc["lagna_sign"],
+            "vargottama": vc["vargottama"],
+            "significator": sig,
+            "note": note,
+        })
+    return out
+
+
 def varga_markdown(vc: Dict, native: str) -> str:
     lines = [
         f"# {vc['name']} — {native}",

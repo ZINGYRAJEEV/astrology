@@ -131,6 +131,34 @@ def _render_yogas(pred: dict, theme: str, heading: str) -> None:
             st.markdown(y["detail"])
 
 
+def _render_divisional(pred: dict, theme: str, heading: str) -> None:
+    """Divisional-chart (Varga) highlights for key life areas."""
+    divisional = pred.get("divisional")
+    if not divisional:
+        return
+    st.markdown(f"{heading} Divisional charts (Vargas)")
+    st.caption("Finer charts that zoom into specific life areas — D-9 marriage, "
+               "D-10 career, D-7 children.")
+    for d in divisional:
+        vg = (f" &middot; Vargottama: {', '.join(d['vargottama'])}"
+              if d["vargottama"] else "")
+        if theme == "horoscope":
+            st.markdown(
+                _wrap(
+                    theme,
+                    f"<b style='font-size:16px;color:#ffe9a8;display:block'>{d['name']}</b>"
+                    f"<div class='subtle' style='margin-top:2px'>{d['theme']}</div>"
+                    f"<div style='margin-top:6px;line-height:1.5'>Ascendant "
+                    f"<b>{d['lagna_sign']}</b>{vg}.<br>{d['note']}</div>",
+                    border="rgba(245,197,66,0.25)",
+                ),
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(f"**{d['name']}** — {d['theme']}")
+            st.markdown(f"Ascendant {d['lagna_sign']}{vg}. {d['note']}")
+
+
 def render_prediction_results(
     pred: dict,
     *,
@@ -179,6 +207,8 @@ def render_prediction_results(
     _render_narrative(pred, theme, heading)
 
     _render_yogas(pred, theme, heading)
+
+    _render_divisional(pred, theme, heading)
 
     if rk and show_technical_panchang:
         nav = rk["navaratna"]

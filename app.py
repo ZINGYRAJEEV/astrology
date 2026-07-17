@@ -60,6 +60,11 @@ pg = st.navigation([
         icon="\U0001f52e",
     ),
     st.Page(
+        "pages/sahams.py",
+        title="Sahams",
+        icon="\U0001f3af",
+    ),
+    st.Page(
         "pages/horoscope_matching.py",
         title="Horoscope Matching",
         icon="\U0001f491",

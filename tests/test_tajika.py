@@ -40,7 +40,7 @@ def test_prashna_yogas_structure():
     yogas = prashna_yogas(chart, ["Sun", "Moon", "Jupiter", "Venus"])
     assert isinstance(yogas, list)
     for y in yogas:
-        assert y["type"] in {"Ithasala", "Ishrafa", "Nakta"}
+        assert y["type"] in {"Ithasala", "Ishrafa", "Nakta", "Yamaya", "Kamboola", "Manau"}
         assert len(y["planets"]) == 2
 
 

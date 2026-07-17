@@ -96,7 +96,9 @@ if st.button("Cast the chart & answer", type="primary", use_container_width=True
 
     if res.get("yogas"):
         st.markdown("### Tajika yogas (how the significators connect)")
-        tone = {"Ithasala": "#6fcf97", "Nakta": "#f2c94c", "Ishrafa": "#eb5757"}
+        tone = {"Ithasala": "#6fcf97", "Kamboola": "#6fcf97",
+                "Nakta": "#f2c94c", "Yamaya": "#f2c94c",
+                "Ishrafa": "#eb5757", "Manau": "#eb5757"}
         for y in res["yogas"]:
             c = tone.get(y["type"], "#9aa4bf")
             st.markdown(

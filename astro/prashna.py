@@ -105,12 +105,8 @@ def _timing_hint(chart: Chart, house: int) -> str:
     return "Dual sign involved — moderate timing, possibly in stages."
 
 
-def _find_yoga(yogas: List[Dict], a: str, b: str) -> Dict:
-    for y in yogas:
-        pair = set(y["planets"])
-        if a in pair and b in pair:
-            return y
-    return {}
+def _all_yogas(yogas: List[Dict], a: str, b: str) -> List[Dict]:
+    return [y for y in yogas if a in set(y["planets"]) and b in set(y["planets"])]
 
 
 def _verdict(pct: float) -> str:
@@ -176,18 +172,17 @@ def answer_prashna(
         key_pair = (lagna_lord, matter_lord) if matter_lord != lagna_lord else (lagna_lord, "Moon")
         inverted = False
 
-    # ---- Tajika yogas (Ithasala / Ishrafa / Nakta) -----------------------
+    # ---- Tajika yogas (Ithasala / Ishrafa / Nakta / Yamaya / Kamboola / Manau)
     yogas = prashna_yogas(chart, list(dict.fromkeys(significators)))
-    key = _find_yoga(yogas, key_pair[0], key_pair[1])
-    if key.get("type") == "Ithasala":
-        raw += -0.9 if inverted else 0.9
-        reasons.append(key["reason"])
-    elif key.get("type") == "Ishrafa":
-        raw += 0.5 if inverted else -0.5
-        reasons.append(key["reason"])
-    elif key.get("type") == "Nakta":
-        raw += -0.4 if inverted else 0.4
-        reasons.append(key["reason"])
+    sign = -1.0 if inverted else 1.0
+    for key in _all_yogas(yogas, key_pair[0], key_pair[1]):
+        delta = {
+            "Ithasala": 0.9, "Kamboola": 0.5, "Nakta": 0.4, "Yamaya": 0.4,
+            "Ishrafa": -0.5, "Manau": -0.4,
+        }.get(key["type"], 0.0)
+        if delta:
+            raw += sign * delta
+            reasons.append(key["reason"])
 
     pct = max(5.0, min(95.0, 50.0 + raw * 8.0))
     verdict = _verdict(pct)

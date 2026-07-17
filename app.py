@@ -45,6 +45,21 @@ pg = st.navigation([
         icon="\U0001f9ff",
     ),
     st.Page(
+        "pages/divisional_charts.py",
+        title="Divisional Charts",
+        icon="\U0001f9e9",
+    ),
+    st.Page(
+        "pages/varshaphal.py",
+        title="Varshaphal (Annual)",
+        icon="\U0001f382",
+    ),
+    st.Page(
+        "pages/prashna.py",
+        title="Prashna (Horary)",
+        icon="\U0001f52e",
+    ),
+    st.Page(
         "pages/horoscope_matching.py",
         title="Horoscope Matching",
         icon="\U0001f491",

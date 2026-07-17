@@ -26,6 +26,7 @@ from .dasha_calc import compute_vimshottari, current_dasha, starting_nakshatra, 
 from .rishikesh_prediction import analyze_rishikesh_birth
 from . import friendly_report as fr
 from .narrative import build_narrative
+from .yogas import detect_yogas
 
 
 def _birth_datetime(chart: Chart) -> datetime:
@@ -207,6 +208,7 @@ def generate_prediction(
             for r in remedies[:4]
         ],
         "weak_planets": foundation["debilitated"],
+        "yogas": detect_yogas(chart),
     }
     # Rebuild summary now that life_predictions exist.
     result["summary"] = fr.build_summary(
@@ -260,6 +262,13 @@ def prediction_markdown(pred: Dict) -> str:
     for line in pred.get("birth_intro", []):
         lines.append(f"- {line}")
     lines.append("")
+
+    yogas = pred.get("yogas")
+    if yogas:
+        lines.append("## Notable yogas in your chart")
+        for y in yogas:
+            lines.append(f"- **{y['name']}** ({y['category']}) — {y['detail']}")
+        lines.append("")
 
     narrative = pred.get("narrative")
     if narrative:

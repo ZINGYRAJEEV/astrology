@@ -97,6 +97,40 @@ def _render_narrative(pred: dict, theme: str, heading: str) -> None:
     st.caption(narrative.get("disclaimer", ""))
 
 
+_YOGA_TONE = {
+    "benefic": ("#6fcf97", "chip-ok"),
+    "mixed": ("#f2c94c", "chip-mix"),
+    "malefic": ("#ef6b6b", "chip-bad"),
+}
+
+
+def _render_yogas(pred: dict, theme: str, heading: str) -> None:
+    """Notable classical yogas found in the chart."""
+    yogas = pred.get("yogas")
+    if not yogas:
+        return
+    st.markdown(f"{heading} Notable yogas in your chart")
+    st.caption("Classical combinations that shape your potentials (they unfold through Dasha & transits).")
+    for y in yogas:
+        colour, cls = _YOGA_TONE.get(y["tone"], ("#f2c94c", "chip-mix"))
+        if theme == "horoscope":
+            st.markdown(
+                _wrap(
+                    theme,
+                    f"<span class='pill' style='background:{colour};color:#0b0e1a;border:none'>"
+                    f"{y['category']}</span>"
+                    f"<b style='font-size:16px;color:#fff;display:block;margin-top:6px'>{y['name']}</b>"
+                    f"<div style='margin-top:6px;line-height:1.5'>{y['detail']}</div>",
+                    border=f"rgba({'111,207,151' if y['tone']=='benefic' else '239,107,107' if y['tone']=='malefic' else '242,201,76'},0.3)",
+                ),
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(f"<span class='{cls}'>{y['category']}</span> **{y['name']}**",
+                        unsafe_allow_html=True)
+            st.markdown(y["detail"])
+
+
 def render_prediction_results(
     pred: dict,
     *,
@@ -143,6 +177,8 @@ def render_prediction_results(
         st.markdown(f"- {line}")
 
     _render_narrative(pred, theme, heading)
+
+    _render_yogas(pred, theme, heading)
 
     if rk and show_technical_panchang:
         nav = rk["navaratna"]

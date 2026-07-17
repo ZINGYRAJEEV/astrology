@@ -36,6 +36,7 @@ def test_generate_prediction():
     assert "Health" in nar["deep_dives"]
     assert nar["deep_dives"]["Health"]
     assert "weak_planets" in pred
+    assert "yogas" in pred and isinstance(pred["yogas"], list)
     print("Nakshatra:", pred["panchang_at_birth"]["nakshatra"])
     print("Navaratna:", rk["navaratna"]["verdict"], rk["navaratna"]["percent"])
     print("Areas:", len(pred["life_predictions"]))

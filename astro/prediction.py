@@ -286,12 +286,17 @@ def prediction_markdown(pred: Dict) -> str:
 
     combos = pred.get("combinations_reading")
     if combos:
+        areas = combos.get("areas", []) if isinstance(combos, dict) else combos
+        nutshell = combos.get("nutshell", "") if isinstance(combos, dict) else ""
         lines.append("## What your planetary combinations mean (in plain words)")
-        for block in combos:
+        if nutshell:
+            lines += [f"_{nutshell}_", ""]
+        for block in areas:
             lines.append(f"### {block['area']}")
             for ln in block["lines"]:
                 mark = {"good": "\u2705", "caution": "\u26a0\ufe0f"}.get(ln["tone"], "\u2022")
-                lines.append(f"- {mark} {ln['text']}")
+                reason = f" _(Why: {ln['reason']})_" if ln.get("reason") else ""
+                lines.append(f"- {mark} {ln['text']}{reason}")
             lines.append("")
 
     narrative = pred.get("narrative")

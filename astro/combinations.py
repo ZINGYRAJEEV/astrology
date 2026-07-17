@@ -867,11 +867,51 @@ def _conj_area(pair: Tuple[str, ...]) -> str:
     return "Career & money"
 
 
-def layman_outcomes(chart: Chart) -> List[Dict]:
+def _nutshell(buckets: Dict[str, List[Dict]]) -> str:
+    """One-paragraph plain-English summary of the whole picture."""
+    good_by_area = {a: sum(1 for ln in lns if ln["tone"] == "good")
+                    for a, lns in buckets.items()}
+    caution_by_area = {a: sum(1 for ln in lns if ln["tone"] == "caution")
+                       for a, lns in buckets.items()}
+    total_good = sum(good_by_area.values())
+    total_caution = sum(caution_by_area.values())
+
+    strengths = [a for a, n in sorted(good_by_area.items(), key=lambda x: -x[1]) if n][:2]
+    cautions = [a for a, n in sorted(caution_by_area.items(), key=lambda x: -x[1]) if n][:2]
+
+    if total_good > total_caution * 1.5:
+        lean = "leans distinctly positive"
+    elif total_caution > total_good * 1.5:
+        lean = "asks for patience and effort in a few areas"
+    else:
+        lean = "is fairly balanced"
+
+    parts = [f"In a nutshell, your chart {lean}."]
+    if strengths:
+        parts.append("Its brightest strengths show up in "
+                     + _join_areas(strengths) + ".")
+    if cautions:
+        parts.append(_join_areas(cautions).capitalize()
+                     + (" ask" if len(cautions) > 1 else " asks")
+                     + " for steady work and simple remedies.")
+    parts.append("Lean on your strengths and handle the cautions calmly — timing "
+                 "(your Dasha and transits) decides when each theme plays out.")
+    return " ".join(parts)
+
+
+def _join_areas(areas: List[str]) -> str:
+    low = [a[0].lower() + a[1:] for a in areas]
+    if len(low) == 1:
+        return low[0]
+    return " and ".join(low)
+
+
+def layman_outcomes(chart: Chart) -> Dict:
     """Translate a chart's combinations into plain-language, area-wise outcomes.
 
     Designed for a non-astrologer: each line says what a combination tends to
-    mean for daily life, tagged good / caution / neutral.
+    mean for daily life, tagged good / caution / neutral, and carries the
+    technical ``reason`` behind it. Returns ``{"nutshell", "areas"}``.
     """
     data = chart_combinations(chart)
     buckets: Dict[str, List[Dict]] = {a: [] for a in LIFE_AREAS}
@@ -889,7 +929,12 @@ def layman_outcomes(chart: Chart) -> List[Dict]:
                              "caution")
         else:
             outcome, tone = ("gives mixed but workable results.", "neutral")
-        buckets[area].append({"text": f"{matter.capitalize()} {outcome}", "tone": tone})
+        buckets[area].append({
+            "text": f"{matter.capitalize()} {outcome}", "tone": tone,
+            "reason": (f"The {_ordinal(d['from_house'])} house lord {d['lord']} "
+                       f"({d['dignity']}) is placed in the {_ordinal(d['to_house'])} "
+                       f"house — a {q} placement."),
+        })
 
     # 2) Planet strength (dignity) — gifts and areas needing care.
     for p in data["placements"]:
@@ -898,21 +943,24 @@ def layman_outcomes(chart: Chart) -> List[Dict]:
             continue
         area, gift, care = pa
         if p["dignity_state"] == "strengthened":
-            buckets[area].append(
-                {"text": f"With {p['planet']} strong in your chart, you enjoy {gift}.",
-                 "tone": "good"})
+            buckets[area].append({
+                "text": f"With {p['planet']} strong in your chart, you enjoy {gift}.",
+                "tone": "good",
+                "reason": f"{p['planet']} is {p['dignity']} in {p['sign']} (House {p['house']})."})
         elif p["dignity_state"] == "weakened":
-            buckets[area].append(
-                {"text": f"{p['planet']} sits in a weak sign, so expect {care}.",
-                 "tone": "caution"})
+            buckets[area].append({
+                "text": f"{p['planet']} sits in a weak sign, so expect {care}.",
+                "tone": "caution",
+                "reason": f"{p['planet']} is {p['dignity']} in {p['sign']} (House {p['house']})."})
 
     # 3) Manglik (Mars) note for marriage.
-    mars_house = next(p["house"] for p in data["placements"] if p["planet"] == "Mars")
-    if mars_house in {1, 4, 7, 8, 12}:
-        buckets["Love & marriage"].append(
-            {"text": "Mars falls in a 'Manglik' position, which can add intensity or "
-                     "friction in marriage — a compatible match and simple remedies help.",
-             "tone": "caution"})
+    mars = next(p for p in data["placements"] if p["planet"] == "Mars")
+    if mars["house"] in {1, 4, 7, 8, 12}:
+        buckets["Love & marriage"].append({
+            "text": "Mars falls in a 'Manglik' position, which can add intensity or "
+                    "friction in marriage — a compatible match and simple remedies help.",
+            "tone": "caution",
+            "reason": f"Mars in House {mars['house']} — a Manglik house (1/4/7/8/12)."})
 
     # 4) Named conjunctions (the famous yogas), in plain words.
     for c in data["conjunctions"]:
@@ -920,20 +968,27 @@ def layman_outcomes(chart: Chart) -> List[Dict]:
             continue
         area = _conj_area(c["planets"])
         tail = f" Upside: {c['merits']}" if c["merits"] else ""
-        buckets[area].append(
-            {"text": f"{c['name']} — {c['significance']}{tail}", "tone": "neutral"})
+        buckets[area].append({
+            "text": f"{c['name']} — {c['significance']}{tail}", "tone": "neutral",
+            "reason": (f"{' + '.join(c['planets'])} conjunct in House {c['house']} "
+                       f"({c['sign']})."
+                       + (f" Watch-outs: {c['demerits']}" if c["demerits"] else ""))})
 
     # 5) Stelliums (strong concentration in one area).
     for s in data["stelliums"]:
         area = _HL_AREA.get(s["house"], ("Luck, growth & spirituality", ""))[0]
-        buckets[area].append({"text": f"{s['name']} — {s['significance']}", "tone": "neutral"})
+        buckets[area].append({
+            "text": f"{s['name']} — {s['significance']}", "tone": "neutral",
+            "reason": (f"{' + '.join(s['planets'])} together in House {s['house']} "
+                       f"({s['sign']}).")})
 
+    nutshell = _nutshell(buckets)
     out: List[Dict] = []
     for area in LIFE_AREAS:
         lines = buckets[area][:6]
         if lines:
             out.append({"area": area, "lines": lines})
-    return out
+    return {"nutshell": nutshell, "areas": out}
 
 
 def combinations_markdown(chart: Chart, native: str) -> str:

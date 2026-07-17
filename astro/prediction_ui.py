@@ -164,12 +164,23 @@ def _render_combinations_reading(pred: dict, theme: str, heading: str) -> None:
     combos = pred.get("combinations_reading")
     if not combos:
         return
+    # Backward-compatible with the older list shape.
+    nutshell = combos.get("nutshell", "") if isinstance(combos, dict) else ""
+    areas = combos.get("areas", []) if isinstance(combos, dict) else combos
+
     st.markdown(f"{heading} What your planetary combinations mean")
     st.caption("Your placements, yogas and house-lords translated into plain, "
                "everyday outcomes — grouped by area of life.")
+    if nutshell:
+        st.markdown(
+            _wrap(theme, f"<b style='color:#ffe9a8'>In a nutshell</b><br>{nutshell}",
+                  border="rgba(245,197,66,0.4)") if theme == "horoscope"
+            else f"> {nutshell}",
+            unsafe_allow_html=(theme == "horoscope"),
+        )
     tone_colour = {"good": "#6fcf97", "caution": "#eb5757", "neutral": "#f2c94c"}
     tone_mark = {"good": "\u2705", "caution": "\u26a0\ufe0f", "neutral": "\u2022"}
-    for block in combos:
+    for block in areas:
         st.markdown(f"**{block['area']}**")
         for ln in block["lines"]:
             colour = tone_colour.get(ln["tone"], "#f2c94c")
@@ -184,6 +195,10 @@ def _render_combinations_reading(pred: dict, theme: str, heading: str) -> None:
             else:
                 st.markdown(f"<div style='margin:2px 0'><span style='color:{colour}'>"
                             f"{mark}</span> {ln['text']}</div>", unsafe_allow_html=True)
+            reason = ln.get("reason")
+            if reason:
+                with st.expander("Why — the astrological reason"):
+                    st.caption(reason)
 
 
 def render_prediction_results(

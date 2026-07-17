@@ -7,8 +7,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from astro.chart_engine import BirthData, compute_chart
 from astro.combinations import (
-    CONJUNCTIONS, PLANET_IN_HOUSE, THREE_PLANET, chart_combinations, conjunction,
-    house_lord_generic, planet_in_house, three_planet,
+    CONJUNCTIONS, NAKSHATRA_TRAIT, PLANET_IN_HOUSE, THREE_PLANET, chart_combinations,
+    combinations_markdown, conjunction, house_lord_generic, planet_in_house, three_planet,
 )
 from astro import reference as ref
 
@@ -50,6 +50,9 @@ def test_chart_combinations_structure():
         assert 1 <= p["house"] <= 12
         assert p["effect"]
         assert p["dignity"] and p["dignity_state"] and p["dignity_note"]
+        assert p["nakshatra"] in ref.NAKSHATRAS
+        assert p["nakshatra_note"] and p["aspect_note"]
+        assert isinstance(p["aspects"], list)
     for c in data["conjunctions"]:
         assert len(c["planets"]) == 2
         assert c["significance"]
@@ -84,6 +87,19 @@ def test_house_lord_generic():
     assert d["quality"] and d["meaning"]
 
 
+def test_nakshatra_traits_complete():
+    for nak in ref.NAKSHATRAS:
+        assert nak in NAKSHATRA_TRAIT and NAKSHATRA_TRAIT[nak]
+
+
+def test_combinations_markdown():
+    chart = compute_chart(BIRTH)
+    md = combinations_markdown(chart, "Test Native")
+    assert "Planetary Combinations Report" in md
+    assert "Planet placements" in md
+    assert "House-lord placements" in md
+
+
 if __name__ == "__main__":
     test_all_planet_house_entries_complete()
     test_conjunction_lookup_is_order_independent()
@@ -93,4 +109,6 @@ if __name__ == "__main__":
     test_house_lords_complete()
     test_three_planet_lookup_and_keys()
     test_house_lord_generic()
+    test_nakshatra_traits_complete()
+    test_combinations_markdown()
     print("Combinations tests passed.")

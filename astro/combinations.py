@@ -14,6 +14,38 @@ from typing import Dict, List, Optional, Tuple
 from . import reference as ref
 from .chart_engine import Chart
 from .strength_calc import all_strengths
+from .aspects import aspects_on_planet
+
+# Short theme for each of the 27 nakshatras (its flavour).
+NAKSHATRA_TRAIT: Dict[str, str] = {
+    "Ashwini": "healing, speed and fresh starts",
+    "Bharani": "endurance, creativity and transformation",
+    "Krittika": "sharpness, purification and leadership",
+    "Rohini": "growth, beauty and material comfort",
+    "Mrigashira": "curiosity, searching and gentleness",
+    "Ardra": "storms, breakthroughs and intensity",
+    "Punarvasu": "renewal, optimism and homecoming",
+    "Pushya": "nourishment, care and stability",
+    "Ashlesha": "intuition, cunning and mysticism",
+    "Magha": "authority, ancestry and tradition",
+    "Purva Phalguni": "pleasure, creativity and ease",
+    "Uttara Phalguni": "service, integrity and partnership",
+    "Hasta": "skill, dexterity and cleverness",
+    "Chitra": "craft, brilliance and design",
+    "Swati": "independence, adaptability and trade",
+    "Vishakha": "ambition, focus and achievement",
+    "Anuradha": "friendship, devotion and discipline",
+    "Jyeshtha": "seniority, protection and courage",
+    "Mula": "roots, investigation and upheaval",
+    "Purva Ashadha": "invincibility, pride and persuasion",
+    "Uttara Ashadha": "victory, ethics and endurance",
+    "Shravana": "listening, learning and connection",
+    "Dhanishta": "rhythm, wealth and ambition",
+    "Shatabhisha": "healing, secrecy and innovation",
+    "Purva Bhadrapada": "idealism, intensity and transformation",
+    "Uttara Bhadrapada": "depth, wisdom and endurance",
+    "Revati": "compassion, completion and nourishment",
+}
 
 PLANET_KEYWORD = {
     "Sun": "authority & vitality", "Moon": "emotions & the mind",
@@ -678,6 +710,26 @@ def _stellium_description(names: List[str], house: int, sign: str) -> Dict:
     }
 
 
+def _aspect_note(aspects: List[Dict]) -> str:
+    if not aspects:
+        return "No planetary aspects fall here — the placement acts on its own."
+    benefics = [a["planet"] for a in aspects if a["is_benefic"]]
+    malefics = [a["planet"] for a in aspects if not a["is_benefic"]]
+    parts = []
+    if benefics:
+        parts.append(f"benefic support from {', '.join(benefics)} (protects and softens)")
+    if malefics:
+        parts.append(f"malefic pressure from {', '.join(malefics)} (adds challenge or urgency)")
+    return "Receives " + "; ".join(parts) + "."
+
+
+def _nakshatra_note(planet: str, nakshatra: str, pada: int) -> str:
+    trait = NAKSHATRA_TRAIT.get(nakshatra, "its own themes")
+    lord = ref.NAKSHATRA_LORD.get(nakshatra, "")
+    return (f"In {nakshatra} (pada {pada}), ruled by {lord} — colouring {planet} with "
+            f"{trait}.")
+
+
 def chart_combinations(chart: Chart) -> Dict:
     """Actual placements, conjunctions, stelliums and house-lords in a chart."""
     strengths = all_strengths(chart)
@@ -687,6 +739,7 @@ def chart_combinations(chart: Chart) -> Dict:
         info = planet_in_house(name, p.house) or {}
         dignity = strengths[name].dignity
         state, dignity_note = _dignity_modifier(dignity)
+        aspects = aspects_on_planet(chart, name)
         placements.append({
             "planet": name,
             "house": p.house,
@@ -696,6 +749,11 @@ def chart_combinations(chart: Chart) -> Dict:
             "dignity": dignity,
             "dignity_state": state,
             "dignity_note": dignity_note,
+            "nakshatra": p.nakshatra,
+            "nakshatra_pada": p.nakshatra_pada,
+            "nakshatra_note": _nakshatra_note(name, p.nakshatra, p.nakshatra_pada),
+            "aspects": [{"planet": a["planet"], "is_benefic": a["is_benefic"]} for a in aspects],
+            "aspect_note": _aspect_note(aspects),
             "effect": info.get("effect", ""),
             "merits": info.get("merits", ""),
             "demerits": info.get("demerits", ""),
@@ -743,3 +801,54 @@ def chart_combinations(chart: Chart) -> Dict:
         "stelliums": stelliums,
         "house_lords": house_lord_placements(chart),
     }
+
+
+def combinations_markdown(chart: Chart, native: str) -> str:
+    """Full planetary-combinations report for a chart, as Markdown."""
+    data = chart_combinations(chart)
+    lines = [
+        f"# Planetary Combinations Report — {native}",
+        "",
+        f"Ascendant: {chart.lagna_sign} · Moon: {chart.planets['Moon'].sign}",
+        "",
+        "## Planet placements",
+    ]
+    for p in data["placements"]:
+        retro = " (retrograde)" if p["retrograde"] else ""
+        lines += [
+            f"### {p['planet']}{retro} — House {p['house']} ({p['house_name']}), "
+            f"{p['sign']} · {p['dignity']}",
+            f"- **Effect:** {p['effect']}",
+            f"- **Merits:** {p['merits']}",
+            f"- **Watch-outs:** {p['demerits']}",
+            f"- **Dignity:** {p['dignity_note']}",
+            f"- **Nakshatra:** {p['nakshatra_note']}",
+            f"- **Aspects:** {p['aspect_note']}",
+            "",
+        ]
+
+    lines.append("## House-lord placements")
+    for d in data["house_lords"]:
+        lines.append(f"- **{_ordinal(d['from_house'])} lord {d['lord']} in "
+                     f"{_ordinal(d['to_house'])}** ({d['quality']}) — {d['meaning']}")
+    lines.append("")
+
+    if data["conjunctions"]:
+        lines.append("## Conjunctions")
+        for c in data["conjunctions"]:
+            lines.append(f"- **{c['name']}** — House {c['house']} ({c['house_name']}), "
+                         f"{c['sign']}. {c['significance']}"
+                         + (f" _Merits:_ {c['merits']}" if c["merits"] else "")
+                         + (f" _Watch-outs:_ {c['demerits']}" if c["demerits"] else ""))
+        lines.append("")
+
+    if data["stelliums"]:
+        lines.append("## Stelliums (3+ planets together)")
+        for s in data["stelliums"]:
+            lines.append(f"- **{s['name']}** — House {s['house']} ({s['house_name']}), "
+                         f"{s['sign']}. {s['significance']}")
+        lines.append("")
+
+    lines.append("> Reference guidance · results are modulated by sign, dignity, "
+                 "aspects and Dasha. For learning and reflection.")
+    return "\n".join(lines)

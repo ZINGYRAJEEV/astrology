@@ -13,8 +13,8 @@ from astro import persistence
 from astro import reference as ref
 from astro.chart_engine import BirthData, compute_chart
 from astro.combinations import (
-    CONJUNCTIONS, THREE_PLANET, chart_combinations, conjunction,
-    house_lord_generic, planet_in_house, three_planet,
+    CONJUNCTIONS, THREE_PLANET, chart_combinations, combinations_markdown,
+    conjunction, house_lord_generic, planet_in_house, three_planet,
 )
 
 st.set_page_config(page_title="Planetary Combinations", page_icon="\U0001fa90", layout="wide")
@@ -249,8 +249,10 @@ with tab_chart:
                  "merits": p["merits"], "demerits": p["demerits"]},
             )
             st.markdown(
-                f"<div style='margin:-8px 0 12px 4px;color:{dstate};font-size:13px'>"
-                f"↳ {p['dignity_note']}</div>",
+                f"<div style='margin:-8px 0 12px 4px;font-size:13px'>"
+                f"<span style='color:{dstate}'>↳ {p['dignity_note']}</span><br>"
+                f"<span style='color:#c9b8ff'>★ {p['nakshatra_note']}</span><br>"
+                f"<span style='color:#9aa4bf'>◎ {p['aspect_note']}</span></div>",
                 unsafe_allow_html=True,
             )
 
@@ -275,6 +277,14 @@ with tab_chart:
                     s["name"], s["planets"], s["significance"], s["merits"], s["demerits"],
                     where=f"House {s['house']} ({s['house_name']}) · {s['sign']}",
                 )
+
+        st.download_button(
+            "Download full combinations report (Markdown)",
+            combinations_markdown(chart, native),
+            file_name=f"combinations_{native.replace(' ', '_')}.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
 
 st.caption(
     "Reference guidance · results are modulated by sign, dignity, aspects and Dasha. "

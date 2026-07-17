@@ -20,6 +20,11 @@ pg = st.navigation([
         icon="\U0001f4c5",
     ),
     st.Page(
+        "pages/festival_calendar.py",
+        title="Festivals & Vrats",
+        icon="\U0001fa94",
+    ),
+    st.Page(
         "pages/life_prediction.py",
         title="Life Prediction",
         icon="\U0001f52e",
@@ -28,6 +33,11 @@ pg = st.navigation([
         "pages/muhurta_finder.py",
         title="Muhurta Finder",
         icon="\U0001f550",
+    ),
+    st.Page(
+        "pages/transits_timing.py",
+        title="Transits & Timing",
+        icon="\U0001fa90",
     ),
     st.Page(
         "pages/horoscope_matching.py",

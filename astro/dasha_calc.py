@@ -26,8 +26,9 @@ class DashaPeriod:
     lord: str
     start: datetime
     end: datetime
-    level: int                      # 1 = Maha, 2 = Antar
+    level: int                      # 1 = Maha, 2 = Antar, 3 = Pratyantar
     antardashas: List["DashaPeriod"] = field(default_factory=list)
+    pratyantardashas: List["DashaPeriod"] = field(default_factory=list)
 
     @property
     def years(self) -> float:
@@ -55,7 +56,9 @@ def _moon_nakshatra_fraction(moon_long: float):
     return name, ref.NAKSHATRA_LORD[name], fraction
 
 
-def compute_vimshottari(chart: Chart, antardashas: bool = True) -> List[DashaPeriod]:
+def compute_vimshottari(
+    chart: Chart, antardashas: bool = True, pratyantardashas: bool = False,
+) -> List[DashaPeriod]:
     """Full Mahadasha timeline (and Antardashas) from birth to birth+120y."""
     moon = chart.planets["Moon"]
     nak_name, start_lord, fraction = _moon_nakshatra_fraction(moon.longitude)
@@ -75,13 +78,15 @@ def compute_vimshottari(chart: Chart, antardashas: bool = True) -> List[DashaPer
         end = _add_years(cursor, span)
         period = DashaPeriod(lord=lord, start=cursor, end=end, level=1)
         if antardashas:
-            period.antardashas = _antardashas(lord, cursor, span)
+            period.antardashas = _antardashas(lord, cursor, span, pratyantardashas)
         periods.append(period)
         cursor = end
     return periods
 
 
-def _antardashas(maha_lord: str, start: datetime, maha_years: float) -> List[DashaPeriod]:
+def _antardashas(
+    maha_lord: str, start: datetime, maha_years: float, pratyantar: bool = False,
+) -> List[DashaPeriod]:
     """Sub-periods within a mahadasha, starting from the mahadasha lord."""
     start_index = ref.VIMSHOTTARI_ORDER.index(maha_lord)
     subs: List[DashaPeriod] = []
@@ -91,7 +96,24 @@ def _antardashas(maha_lord: str, start: datetime, maha_years: float) -> List[Das
         # Antardasha length proportional to lord's years out of 120.
         sub_years = maha_years * ref.VIMSHOTTARI_YEARS[lord] / 120.0
         end = _add_years(cursor, sub_years)
-        subs.append(DashaPeriod(lord=lord, start=cursor, end=end, level=2))
+        sub = DashaPeriod(lord=lord, start=cursor, end=end, level=2)
+        if pratyantar:
+            sub.pratyantardashas = _pratyantardashas(lord, cursor, sub_years)
+        subs.append(sub)
+        cursor = end
+    return subs
+
+
+def _pratyantardashas(antar_lord: str, start: datetime, antar_years: float) -> List[DashaPeriod]:
+    """Third-level sub-periods within an antardasha, starting from the antar lord."""
+    start_index = ref.VIMSHOTTARI_ORDER.index(antar_lord)
+    subs: List[DashaPeriod] = []
+    cursor = start
+    for i in range(9):
+        lord = ref.VIMSHOTTARI_ORDER[(start_index + i) % 9]
+        pra_years = antar_years * ref.VIMSHOTTARI_YEARS[lord] / 120.0
+        end = _add_years(cursor, pra_years)
+        subs.append(DashaPeriod(lord=lord, start=cursor, end=end, level=3))
         cursor = end
     return subs
 
@@ -108,6 +130,48 @@ def current_dasha(periods: List[DashaPeriod], when: Optional[datetime] = None):
                     break
             return maha, antar
     return None, None
+
+
+def current_dasha_full(periods: List[DashaPeriod], when: Optional[datetime] = None):
+    """Return (mahadasha, antardasha, pratyantardasha) active at ``when``.
+
+    Requires ``periods`` built with ``pratyantardashas=True`` for the third
+    level; otherwise pratyantardasha is ``None``.
+    """
+    when = when or datetime.now()
+    maha, antar = current_dasha(periods, when)
+    pratyantar = None
+    if antar and antar.pratyantardashas:
+        for pr in antar.pratyantardashas:
+            if pr.start <= when < pr.end:
+                pratyantar = pr
+                break
+    return maha, antar, pratyantar
+
+
+def upcoming_changes(
+    periods: List[DashaPeriod], when: Optional[datetime] = None, count: int = 5,
+) -> List[dict]:
+    """Next few Antardasha (and Pratyantardasha) transitions after ``when``."""
+    when = when or datetime.now()
+    events: List[dict] = []
+    for maha in periods:
+        for a in maha.antardashas:
+            if a.start >= when:
+                events.append({
+                    "level": "Antardasha",
+                    "label": f"{maha.lord} / {a.lord}",
+                    "start": a.start,
+                })
+            for pr in a.pratyantardashas:
+                if pr.start >= when:
+                    events.append({
+                        "level": "Pratyantardasha",
+                        "label": f"{maha.lord} / {a.lord} / {pr.lord}",
+                        "start": pr.start,
+                    })
+    events.sort(key=lambda e: e["start"])
+    return events[:count]
 
 
 def starting_nakshatra(chart: Chart) -> dict:

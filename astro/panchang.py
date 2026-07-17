@@ -174,16 +174,46 @@ def _find_transition(jd_start: float, tz_offset: float, test_fn, max_hours: floa
     return None
 
 
-def _hindu_month_purnimanta(sun_lon: float, tithi_idx: int) -> Tuple[str, str]:
-    """Approximate Purnimanta month (North India / Rishikesh convention)."""
-    sign_idx = int(sun_lon // 30) % 12
-    month = pd.SUN_SIGN_TO_MONTH[sign_idx]
-    # After Purnima (tithi 15) in Shukla, month advances in Purnimanta.
-    if tithi_idx > 15:
-        month_idx = pd.HINDU_MONTHS.index(month)
-        month = pd.HINDU_MONTHS[(month_idx + 1) % 12]
-    hi_idx = pd.HINDU_MONTHS.index(month)
-    return month, pd.HINDU_MONTHS_HINDI[hi_idx]
+def _elong_at(jd: float) -> float:
+    s, m = _sun_moon_longitudes(jd)
+    return _elongation(s, m)
+
+
+def _next_new_moon(jd: float) -> float:
+    """First lunar conjunction (new moon) strictly after ``jd`` (UT Julian day)."""
+    step = 1.0
+    prev, prev_e = jd, _elong_at(jd)
+    for _ in range(45):
+        cur = prev + step
+        cur_e = _elong_at(cur)
+        if cur_e < prev_e:  # elongation wrapped 360 -> 0 => new moon in (prev, cur)
+            lo, hi = prev, cur
+            for _ in range(40):
+                mid = (lo + hi) / 2.0
+                if _elong_at(mid) > 180.0:
+                    lo = mid
+                else:
+                    hi = mid
+            return hi
+        prev, prev_e = cur, cur_e
+    return jd
+
+
+def _lunar_month(ref_jd: float, tithi_idx: int) -> Tuple[str, str]:
+    """Purnimanta lunar month (North-Indian / Rishikesh) via new-moon boundaries.
+
+    The amanta month is named after the solar sign the Sun occupies at the new
+    moon that begins it: index = (sun_sign_at_start - 11) % 12 over HINDU_MONTHS
+    (Chaitra..Phalguna). Purnimanta shifts the Krishna-paksha half to the next
+    month's name.
+    """
+    next_nm = _next_new_moon(ref_jd)
+    start_nm = _next_new_moon(next_nm - 35.0)  # new moon that began this month
+    sun_at_start = _sun_moon_longitudes(start_nm)[0]
+    s0 = int(sun_at_start // 30) % 12
+    amanta = (s0 - 11) % 12
+    idx = (amanta + 1) % 12 if tithi_idx > 15 else amanta
+    return pd.HINDU_MONTHS[idx], pd.HINDU_MONTHS_HINDI[idx]
 
 
 def _samvat(d: date, month_name: str) -> Tuple[int, int]:
@@ -309,7 +339,7 @@ def compute_panchang(
     y_end = _find_transition(ref_jd, tz_offset, yoga_at)
     k_end = _find_transition(ref_jd, tz_offset, kar_at)
 
-    hindu_month, hindu_month_hi = _hindu_month_purnimanta(sun_lon, t_idx)
+    hindu_month, hindu_month_hi = _lunar_month(ref_jd, t_idx)
     vs, ss = _samvat(d, hindu_month)
 
     # Inauspicious daytime segments.

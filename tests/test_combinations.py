@@ -8,7 +8,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from astro.chart_engine import BirthData, compute_chart
 from astro.combinations import (
     CONJUNCTIONS, NAKSHATRA_TRAIT, PLANET_IN_HOUSE, THREE_PLANET, chart_combinations,
-    combinations_markdown, conjunction, house_lord_generic, planet_in_house, three_planet,
+    combinations_markdown, conjunction, house_lord_generic, layman_outcomes,
+    outcome_balance, planet_in_house, three_planet,
 )
 from astro import reference as ref
 
@@ -100,6 +101,21 @@ def test_combinations_markdown():
     assert "House-lord placements" in md
 
 
+def test_layman_outcomes_and_balance():
+    chart = compute_chart(BIRTH)
+    reading = layman_outcomes(chart)
+    assert reading["nutshell"] and reading["areas"]
+    for block in reading["areas"]:
+        for ln in block["lines"]:
+            assert ln["text"] and ln["reason"]
+            assert ln["tone"] in {"good", "caution", "neutral"}
+    bal = outcome_balance(reading)
+    assert 0 <= bal["score"] <= 100
+    counted = bal["good"] + bal["caution"] + bal["neutral"]
+    total = sum(len(b["lines"]) for b in reading["areas"])
+    assert counted == total
+
+
 if __name__ == "__main__":
     test_all_planet_house_entries_complete()
     test_conjunction_lookup_is_order_independent()
@@ -111,4 +127,5 @@ if __name__ == "__main__":
     test_house_lord_generic()
     test_nakshatra_traits_complete()
     test_combinations_markdown()
+    test_layman_outcomes_and_balance()
     print("Combinations tests passed.")

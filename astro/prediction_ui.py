@@ -171,6 +171,15 @@ def _render_combinations_reading(pred: dict, theme: str, heading: str) -> None:
     st.markdown(f"{heading} What your planetary combinations mean")
     st.caption("Your placements, yogas and house-lords translated into plain, "
                "everyday outcomes — grouped by area of life.")
+
+    if isinstance(combos, dict):
+        from .combinations import outcome_balance
+        bal = outcome_balance(combos)
+        st.progress(bal["score"] / 100.0)
+        st.caption(f"Positivity balance: {bal['score']}% \u00b7 "
+                   f"\u2705 {bal['good']} strengths \u00b7 \u26a0\ufe0f {bal['caution']} cautions "
+                   f"\u00b7 \u2022 {bal['neutral']} to note")
+
     if nutshell:
         st.markdown(
             _wrap(theme, f"<b style='color:#ffe9a8'>In a nutshell</b><br>{nutshell}",

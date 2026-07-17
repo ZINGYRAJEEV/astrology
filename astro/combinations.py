@@ -991,6 +991,22 @@ def layman_outcomes(chart: Chart) -> Dict:
     return {"nutshell": nutshell, "areas": out}
 
 
+def outcome_balance(reading: Dict) -> Dict:
+    """Good/caution/neutral tallies and a positivity score (0-100) for a reading."""
+    good = caution = neutral = 0
+    for block in reading.get("areas", []):
+        for ln in block["lines"]:
+            if ln["tone"] == "good":
+                good += 1
+            elif ln["tone"] == "caution":
+                caution += 1
+            else:
+                neutral += 1
+    denom = good + caution
+    score = round(good / denom * 100) if denom else 50
+    return {"good": good, "caution": caution, "neutral": neutral, "score": score}
+
+
 def combinations_markdown(chart: Chart, native: str) -> str:
     """Full planetary-combinations report for a chart, as Markdown."""
     data = chart_combinations(chart)

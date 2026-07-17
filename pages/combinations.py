@@ -14,7 +14,8 @@ from astro import reference as ref
 from astro.chart_engine import BirthData, compute_chart
 from astro.combinations import (
     CONJUNCTIONS, THREE_PLANET, chart_combinations, combinations_markdown,
-    conjunction, house_lord_generic, planet_in_house, three_planet,
+    conjunction, house_lord_generic, layman_outcomes, outcome_balance,
+    planet_in_house, three_planet,
 )
 
 st.set_page_config(page_title="Planetary Combinations", page_icon="\U0001fa90", layout="wide")
@@ -237,7 +238,31 @@ with tab_chart:
         data = chart_combinations(chart)
         native = chart.birth.name or "Native"
 
-        st.markdown(f"#### {native} — planet placements")
+        reading = layman_outcomes(chart)
+        bal = outcome_balance(reading)
+        st.markdown(f"#### {native} — what it means for you (plain words)")
+        st.progress(bal["score"] / 100.0)
+        st.caption(f"Positivity balance: {bal['score']}% · ✅ {bal['good']} strengths · "
+                   f"⚠️ {bal['caution']} cautions · • {bal['neutral']} to note")
+        st.markdown(f"> {reading['nutshell']}")
+        tone_colour = {"good": "#6fcf97", "caution": "#eb5757", "neutral": "#f2c94c"}
+        tone_mark = {"good": "✅", "caution": "⚠️", "neutral": "•"}
+        for block in reading["areas"]:
+            st.markdown(f"**{block['area']}**")
+            for ln in block["lines"]:
+                colour = tone_colour.get(ln["tone"], "#f2c94c")
+                mark = tone_mark.get(ln["tone"], "•")
+                st.markdown(
+                    f"<div style='margin:2px 0'><span style='color:{colour}'>{mark}</span> "
+                    f"{ln['text']}</div>",
+                    unsafe_allow_html=True,
+                )
+                if ln.get("reason"):
+                    with st.expander("Why — the astrological reason"):
+                        st.caption(ln["reason"])
+
+        st.divider()
+        st.markdown(f"#### {native} — planet placements (technical)")
         st.caption("Each placement is re-coloured by the planet's dignity (its sign strength).")
         for p in data["placements"]:
             dstate = {"strengthened": "#6fcf97", "weakened": "#eb5757",

@@ -33,55 +33,59 @@ st.markdown(
 st.markdown("# \U0001f52e Life Prediction")
 st.caption("Hrishikesh Panchang tradition \u00b7 birth chart + Panchang at birth")
 
-st.markdown("### Birth place")
-place_mode = st.radio(
-    "Location", ["Pick a city", "Manual lat/long"], horizontal=True,
-    key="pred_place_mode",
-)
-if place_mode == "Pick a city":
-    city = st.selectbox(
-        "Birth place",
-        geo.PLACE_NAMES,
-        index=geo.PLACE_NAMES.index("Rishikesh, India")
-        if "Rishikesh, India" in geo.PLACE_NAMES else 0,
-        key="pred_city",
+form_col, _ = st.columns([2, 1])
+with form_col:
+  with st.container(border=True):
+    st.markdown("### Birth Data")
+    place_mode = st.radio(
+        "Location", ["Pick a city", "Manual lat/long"], horizontal=True,
+        key="pred_place_mode",
     )
-    place_info = geo.resolve_place(city)
-    lat, lon, place_label = (
-        place_info.latitude, place_info.longitude, place_info.name,
-    )
-    tz_name = place_info.timezone
-    st.caption(f"{place_label} \u00b7 {place_info.timezone}")
-else:
-    col_lat, col_lon, col_tz = st.columns(3)
-    with col_lat:
-        lat = st.number_input("Latitude", value=30.0869, format="%.4f", key="pred_lat")
-    with col_lon:
-        lon = st.number_input("Longitude", value=78.2676, format="%.4f", key="pred_lon")
-    with col_tz:
-        tz_off_manual = st.number_input(
-            "UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
-            key="pred_tz",
+    if place_mode == "Pick a city":
+        city = st.selectbox(
+            "Birth place",
+            geo.PLACE_NAMES,
+            index=geo.PLACE_NAMES.index("Rishikesh, India")
+            if "Rishikesh, India" in geo.PLACE_NAMES else 0,
+            key="pred_city",
         )
-    place_label = f"{lat:.3f},{lon:.3f}"
-    tz_name = None
-
-with st.form("prediction_form"):
-    c1, c2 = st.columns(2)
-    with c1:
-        name = st.text_input("Full name", placeholder="Your name")
-        b_date = st.date_input(
-            "Date of birth",
-            value=date(1990, 1, 1),
-            min_value=date(1800, 1, 1),
-            max_value=date(2100, 12, 31),
+        place_info = geo.resolve_place(city)
+        lat, lon, place_label = (
+            place_info.latitude, place_info.longitude, place_info.name,
         )
-        b_time = st.time_input("Time of birth", value=time(12, 0), step=60)
-    with c2:
-        intent = st.selectbox("Prediction focus", list(INTENT_HOUSES.keys()),
-                              index=len(INTENT_HOUSES) - 1)
+        tz_name = place_info.timezone
+        st.caption(f"{place_label} \u00b7 {place_info.timezone}")
+    else:
+        col_lat, col_lon, col_tz = st.columns(3)
+        with col_lat:
+            lat = st.number_input("Latitude", value=30.0869, format="%.4f", key="pred_lat")
+        with col_lon:
+            lon = st.number_input("Longitude", value=78.2676, format="%.4f", key="pred_lon")
+        with col_tz:
+            tz_off_manual = st.number_input(
+                "UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
+                key="pred_tz",
+            )
+        place_label = f"{lat:.3f},{lon:.3f}"
+        tz_name = None
 
-    submitted = st.form_submit_button("Generate Prediction", type="primary", use_container_width=True)
+    with st.form("prediction_form"):
+        c1, c2 = st.columns(2)
+        with c1:
+            name = st.text_input("Full name", placeholder="Your name")
+            b_date = st.date_input(
+                "Date of birth",
+                value=date(1990, 1, 1),
+                min_value=date(1800, 1, 1),
+                max_value=date(2100, 12, 31),
+            )
+            b_time = st.time_input("Time of birth", value=time(12, 0), step=60)
+        with c2:
+            intent = st.selectbox("Prediction focus", list(INTENT_HOUSES.keys()),
+                                  index=len(INTENT_HOUSES) - 1)
+        st.caption("Birth time accuracy is mission-critical for the Ascendant.")
+
+        submitted = st.form_submit_button("Generate Prediction", type="primary", use_container_width=True)
 
 if submitted:
     if tz_name:

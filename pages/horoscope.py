@@ -188,31 +188,33 @@ def set_chart(chart):
     st.session_state["chart"] = chart
 
 
-# ---------------------------------------------------------------------------
-# Sidebar - birth data input (Phase 1, steps 1-3) + saved charts
-# ---------------------------------------------------------------------------
-with st.sidebar:
-    st.markdown("## \u2728 Horoscope & Reading")
-    st.caption("Birth chart, 12-step interpretation, timing & remedies")
+def render_birth_form(key_prefix: str = "main") -> None:
+    """Render the birth-data input form (name, date, time, location).
 
+    On submit it computes the chart and stores it in session state. Rendered in
+    the main content area so users enter their details on the page itself.
+    """
     st.markdown("### Birth Data")
-    name = st.text_input("Name", value=st.session_state.get("f_name", ""))
+    name = st.text_input("Name", value=st.session_state.get("f_name", ""),
+                         key=f"{key_prefix}_name")
 
     col_a, col_b = st.columns(2)
     with col_a:
         b_date = st.date_input(
             "Date of birth", value=st.session_state.get("f_date", date(1990, 1, 1)),
             min_value=date(1800, 1, 1), max_value=date(2100, 12, 31),
+            key=f"{key_prefix}_date",
         )
     with col_b:
         b_time = st.time_input(
             "Time of birth", value=st.session_state.get("f_time", time(12, 0)),
-            step=60,
+            step=60, key=f"{key_prefix}_time",
         )
     st.caption("Birth time accuracy is mission-critical for the Ascendant.")
 
     place_mode = st.radio(
         "Location", ["Pick a city", "Manual lat/long"], horizontal=True,
+        key=f"{key_prefix}_place_mode",
     )
     if place_mode == "Pick a city":
         city = st.selectbox(
@@ -220,6 +222,7 @@ with st.sidebar:
             geo.PLACE_NAMES,
             index=geo.PLACE_NAMES.index("Rishikesh, India")
             if "Rishikesh, India" in geo.PLACE_NAMES else 0,
+            key=f"{key_prefix}_city",
         )
         place_info = geo.resolve_place(city)
         lat, lon, place_label = (
@@ -234,14 +237,18 @@ with st.sidebar:
             f"{place_label} \u00b7 {place_info.timezone} (UTC{tz_off:+.2f})"
         )
     else:
-        lat = st.number_input("Latitude", value=30.0869, format="%.4f")
-        lon = st.number_input("Longitude", value=78.2676, format="%.4f")
+        lat = st.number_input("Latitude", value=30.0869, format="%.4f",
+                              key=f"{key_prefix}_lat")
+        lon = st.number_input("Longitude", value=78.2676, format="%.4f",
+                              key=f"{key_prefix}_lon")
         tz_off = st.number_input(
             "UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
+            key=f"{key_prefix}_tz",
         )
         place_label = f"{lat:.3f},{lon:.3f}"
 
-    if st.button("Calculate Chart", type="primary", use_container_width=True):
+    if st.button("Calculate Chart", type="primary", use_container_width=True,
+                 key=f"{key_prefix}_calc"):
         birth = BirthData(
             name=name, year=b_date.year, month=b_date.month, day=b_date.day,
             hour=b_time.hour, minute=b_time.minute,
@@ -251,8 +258,16 @@ with st.sidebar:
         set_chart(compute_chart(birth))
         st.session_state.update(f_name=name, f_date=b_date, f_time=b_time)
         st.success("Chart calculated.")
+        st.rerun()
 
-    st.divider()
+
+# ---------------------------------------------------------------------------
+# Sidebar - saved charts only (birth data input now lives on the main page)
+# ---------------------------------------------------------------------------
+with st.sidebar:
+    st.markdown("## \u2728 Horoscope & Reading")
+    st.caption("Birth chart, 12-step interpretation, timing & remedies")
+
     st.markdown("### Saved Charts")
     if get_chart() is not None:
         if st.button("\U0001f4be Save current chart", use_container_width=True):
@@ -289,13 +304,18 @@ if chart is None:
             timing and remedies &mdash; in three guided phases.
           </div>
           <div style="margin-top:18px;color:#f5c542;font-size:15px;">
-            &#9776; Enter birth details in the sidebar, then press
+            &#9776; Enter your birth details below, then press
             <b>Calculate Chart</b> to begin.
           </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+    st.write("")
+    form_col, _ = st.columns([2, 1])
+    with form_col:
+        with st.container(border=True):
+            render_birth_form("landing")
     st.write("")
     c1, c2, c3 = st.columns(3)
     c1.markdown(
@@ -315,6 +335,9 @@ if chart is None:
         unsafe_allow_html=True)
     st.stop()
 
+
+with st.expander("\u2728 Edit birth details / calculate a new chart"):
+    render_birth_form("edit")
 
 # Top-line intent selector (Phase 1, step 5) and chart-style toggle (step 4).
 top1, top2, top3 = st.columns([2, 2, 2])

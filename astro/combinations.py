@@ -59,6 +59,57 @@ _KENDRA_TRIKONA = {1, 4, 5, 7, 9, 10}
 _UPACHAYA = {11}
 _DUSTHANA = {6, 8, 12}
 
+# Life areas used to group plain-language outcomes for a layman reader.
+LIFE_AREAS = [
+    "You & your nature",
+    "Career & money",
+    "Love & marriage",
+    "Family & home",
+    "Health & energy",
+    "Luck, growth & spirituality",
+]
+
+# House whose lord we read -> (life area, friendly phrase for what it governs).
+_HL_AREA = {
+    1: ("You & your nature", "your confidence and the way you come across"),
+    2: ("Career & money", "your income and family wealth"),
+    3: ("You & your nature", "your courage and communication"),
+    4: ("Family & home", "your home life, property and peace of mind"),
+    5: ("Family & home", "children, creativity and romance"),
+    6: ("Health & energy", "your health and handling of rivals or debts"),
+    7: ("Love & marriage", "your marriage and close partnerships"),
+    8: ("Health & energy", "longevity and life's ups and downs"),
+    9: ("Luck, growth & spirituality", "your luck, higher learning and guidance"),
+    10: ("Career & money", "your career and reputation"),
+    11: ("Career & money", "your gains and the fulfilment of your wishes"),
+    12: ("Luck, growth & spirituality", "spirituality, foreign links and expenses"),
+}
+
+# Key houses whose lord placement most shapes everyday life.
+_KEY_LORDS = {1, 2, 4, 5, 7, 9, 10, 11}
+
+# Planet -> (life area, what a STRONG placement gives, what a WEAK one needs).
+_PLANET_AREA = {
+    "Sun": ("You & your nature", "strong confidence, leadership and vitality",
+            "confidence and vitality that need nurturing"),
+    "Moon": ("You & your nature", "emotional balance and a warm, likeable nature",
+             "emotional ups and downs that need care"),
+    "Mars": ("Health & energy", "great energy, courage and drive",
+             "a temper and restless energy that need channelling"),
+    "Mercury": ("Career & money", "sharp intelligence and communication skills",
+                "overthinking or nervousness that needs managing"),
+    "Jupiter": ("Luck, growth & spirituality", "wisdom, good fortune and sound guidance",
+                "fortune and optimism that call for conscious effort"),
+    "Venus": ("Love & marriage", "charm, love and comforts that come easily",
+              "relationships and comforts that need attention"),
+    "Saturn": ("Career & money", "discipline that builds lasting, durable success",
+               "delays that teach patience and perseverance"),
+    "Rahu": ("Luck, growth & spirituality", "bold ambition and unconventional success",
+             "restlessness or illusion that needs grounding"),
+    "Ketu": ("Luck, growth & spirituality", "spiritual depth and strong intuition",
+             "detachment or confusion that needs grounding"),
+}
+
 
 def _ordinal(n: int) -> str:
     return {1: "1st", 2: "2nd", 3: "3rd"}.get(n, f"{n}th")
@@ -801,6 +852,88 @@ def chart_combinations(chart: Chart) -> Dict:
         "stelliums": stelliums,
         "house_lords": house_lord_placements(chart),
     }
+
+
+def _conj_area(pair: Tuple[str, ...]) -> str:
+    s = set(pair)
+    if "Venus" in s:
+        return "Love & marriage"
+    if "Jupiter" in s or "Ketu" in s:
+        return "Luck, growth & spirituality"
+    if "Moon" in s:
+        return "You & your nature"
+    if "Mars" in s and not ({"Sun", "Saturn", "Mercury"} & s):
+        return "Health & energy"
+    return "Career & money"
+
+
+def layman_outcomes(chart: Chart) -> List[Dict]:
+    """Translate a chart's combinations into plain-language, area-wise outcomes.
+
+    Designed for a non-astrologer: each line says what a combination tends to
+    mean for daily life, tagged good / caution / neutral.
+    """
+    data = chart_combinations(chart)
+    buckets: Dict[str, List[Dict]] = {a: [] for a in LIFE_AREAS}
+
+    # 1) House-lord placements (the "where your life-areas are steered" layer).
+    for d in data["house_lords"]:
+        if d["from_house"] not in _KEY_LORDS:
+            continue
+        area, matter = _HL_AREA[d["from_house"]]
+        q = d["quality"]
+        if q.startswith("favourable"):
+            outcome, tone = ("tends to flow smoothly and bring good results.", "good")
+        elif q.startswith("challenging"):
+            outcome, tone = ("can bring ups and downs, so patience and steady effort pay off.",
+                             "caution")
+        else:
+            outcome, tone = ("gives mixed but workable results.", "neutral")
+        buckets[area].append({"text": f"{matter.capitalize()} {outcome}", "tone": tone})
+
+    # 2) Planet strength (dignity) — gifts and areas needing care.
+    for p in data["placements"]:
+        pa = _PLANET_AREA.get(p["planet"])
+        if not pa:
+            continue
+        area, gift, care = pa
+        if p["dignity_state"] == "strengthened":
+            buckets[area].append(
+                {"text": f"With {p['planet']} strong in your chart, you enjoy {gift}.",
+                 "tone": "good"})
+        elif p["dignity_state"] == "weakened":
+            buckets[area].append(
+                {"text": f"{p['planet']} sits in a weak sign, so expect {care}.",
+                 "tone": "caution"})
+
+    # 3) Manglik (Mars) note for marriage.
+    mars_house = next(p["house"] for p in data["placements"] if p["planet"] == "Mars")
+    if mars_house in {1, 4, 7, 8, 12}:
+        buckets["Love & marriage"].append(
+            {"text": "Mars falls in a 'Manglik' position, which can add intensity or "
+                     "friction in marriage — a compatible match and simple remedies help.",
+             "tone": "caution"})
+
+    # 4) Named conjunctions (the famous yogas), in plain words.
+    for c in data["conjunctions"]:
+        if not c["curated"]:
+            continue
+        area = _conj_area(c["planets"])
+        tail = f" Upside: {c['merits']}" if c["merits"] else ""
+        buckets[area].append(
+            {"text": f"{c['name']} — {c['significance']}{tail}", "tone": "neutral"})
+
+    # 5) Stelliums (strong concentration in one area).
+    for s in data["stelliums"]:
+        area = _HL_AREA.get(s["house"], ("Luck, growth & spirituality", ""))[0]
+        buckets[area].append({"text": f"{s['name']} — {s['significance']}", "tone": "neutral"})
+
+    out: List[Dict] = []
+    for area in LIFE_AREAS:
+        lines = buckets[area][:6]
+        if lines:
+            out.append({"area": area, "lines": lines})
+    return out
 
 
 def combinations_markdown(chart: Chart, native: str) -> str:

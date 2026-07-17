@@ -28,6 +28,7 @@ from . import friendly_report as fr
 from .narrative import build_narrative
 from .yogas import detect_yogas
 from .vargas import reading_highlights
+from .combinations import layman_outcomes
 
 
 def _birth_datetime(chart: Chart) -> datetime:
@@ -211,6 +212,7 @@ def generate_prediction(
         "weak_planets": foundation["debilitated"],
         "yogas": detect_yogas(chart),
         "divisional": reading_highlights(chart),
+        "combinations_reading": layman_outcomes(chart),
     }
     # Rebuild summary now that life_predictions exist.
     result["summary"] = fr.build_summary(
@@ -281,6 +283,16 @@ def prediction_markdown(pred: Dict) -> str:
             lines.append(f"- **{d['name']}** — {d['theme']}. Ascendant "
                          f"{d['lagna_sign']}{vg}. {d['note']}")
         lines.append("")
+
+    combos = pred.get("combinations_reading")
+    if combos:
+        lines.append("## What your planetary combinations mean (in plain words)")
+        for block in combos:
+            lines.append(f"### {block['area']}")
+            for ln in block["lines"]:
+                mark = {"good": "\u2705", "caution": "\u26a0\ufe0f"}.get(ln["tone"], "\u2022")
+                lines.append(f"- {mark} {ln['text']}")
+            lines.append("")
 
     narrative = pred.get("narrative")
     if narrative:

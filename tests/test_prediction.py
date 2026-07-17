@@ -40,6 +40,11 @@ def test_generate_prediction():
     assert "divisional" in pred and len(pred["divisional"]) == 3
     for d in pred["divisional"]:
         assert d["lagna_sign"] and d["note"]
+    assert "combinations_reading" in pred and pred["combinations_reading"]
+    for block in pred["combinations_reading"]:
+        assert block["area"] and block["lines"]
+        for ln in block["lines"]:
+            assert ln["text"] and ln["tone"] in {"good", "caution", "neutral"}
     print("Nakshatra:", pred["panchang_at_birth"]["nakshatra"])
     print("Navaratna:", rk["navaratna"]["verdict"], rk["navaratna"]["percent"])
     print("Areas:", len(pred["life_predictions"]))

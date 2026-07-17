@@ -159,6 +159,33 @@ def _render_divisional(pred: dict, theme: str, heading: str) -> None:
             st.markdown(f"Ascendant {d['lagna_sign']}{vg}. {d['note']}")
 
 
+def _render_combinations_reading(pred: dict, theme: str, heading: str) -> None:
+    """Plain-language mapping of planetary combinations to life outcomes."""
+    combos = pred.get("combinations_reading")
+    if not combos:
+        return
+    st.markdown(f"{heading} What your planetary combinations mean")
+    st.caption("Your placements, yogas and house-lords translated into plain, "
+               "everyday outcomes — grouped by area of life.")
+    tone_colour = {"good": "#6fcf97", "caution": "#eb5757", "neutral": "#f2c94c"}
+    tone_mark = {"good": "\u2705", "caution": "\u26a0\ufe0f", "neutral": "\u2022"}
+    for block in combos:
+        st.markdown(f"**{block['area']}**")
+        for ln in block["lines"]:
+            colour = tone_colour.get(ln["tone"], "#f2c94c")
+            mark = tone_mark.get(ln["tone"], "\u2022")
+            if theme == "horoscope":
+                st.markdown(
+                    _wrap(theme,
+                          f"<span style='color:{colour}'>{mark}</span> {ln['text']}",
+                          border="rgba(245,197,66,0.18)"),
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(f"<div style='margin:2px 0'><span style='color:{colour}'>"
+                            f"{mark}</span> {ln['text']}</div>", unsafe_allow_html=True)
+
+
 def render_prediction_results(
     pred: dict,
     *,
@@ -209,6 +236,8 @@ def render_prediction_results(
     _render_yogas(pred, theme, heading)
 
     _render_divisional(pred, theme, heading)
+
+    _render_combinations_reading(pred, theme, heading)
 
     if rk and show_technical_panchang:
         nav = rk["navaratna"]

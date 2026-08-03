@@ -339,17 +339,6 @@ if chart is None:
 with st.expander("\u2728 Edit birth details / calculate a new chart"):
     render_birth_form("edit")
 
-# Top-line intent selector (Phase 1, step 5) and chart-style toggle (step 4).
-top1, top2, top3 = st.columns([2, 2, 2])
-with top1:
-    intent = st.selectbox("Your focus (client intent)", list(INTENT_HOUSES.keys()),
-                          index=len(INTENT_HOUSES) - 1)
-with top2:
-    style = st.radio("Chart style", ["South Indian", "North Indian"], horizontal=True)
-with top3:
-    varga = st.radio("Chart", ["D1 (Rashi)", "D9 (Navamsha)"], horizontal=True)
-varga_key = "D9" if varga.startswith("D9") else "D1"
-
 b = chart.birth
 moon = chart.planets["Moon"]
 st.markdown(
@@ -374,13 +363,39 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# Focus is always visible; chart display options stay tucked away.
+intent = st.selectbox(
+    "Your focus",
+    list(INTENT_HOUSES.keys()),
+    index=len(INTENT_HOUSES) - 1,
+    help="Shapes which life areas the reading emphasises.",
+)
+with st.expander("Chart display options", expanded=False):
+    style = st.radio("Chart style", ["South Indian", "North Indian"], horizontal=True)
+    varga = st.radio("Chart", ["D1 (Rashi)", "D9 (Navamsha)"], horizontal=True)
+varga_key = "D9" if varga.startswith("D9") else "D1"
+
+st.markdown(
+    """
+    <div class="card" style="border-color:rgba(245,197,66,0.28);margin-top:4px">
+      <b style="color:#ffe9a8">Where to start</b>
+      <div class="subtle" style="margin-top:6px;line-height:1.55">
+        Begin on <b>Your Report</b> — a guided, numbered reading in plain words.
+        Use <b>Focus reading</b> for a short intent-only view.
+        Open Chart / Evaluation / Synthesis only when you want the technical detail.
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 tab_pred, tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "\U0001f52e Predictions", "\U0001f4d6 Your Reading", "Phase 1 - Chart",
-    "Phase 2 - Evaluation", "Phase 3 - Synthesis", "Timing & Transits", "\U0001fab7 Witness",
+    "\U0001f52e Your Report", "\U0001f4d6 Focus reading", "Chart",
+    "Evaluation", "Synthesis & remedies", "Timing & Transits", "\U0001fab7 Witness",
 ])
 
 # ===========================================================================
-# PREDICTIONS - chart + Panchang at birth (name, date, time, place)
+# YOUR REPORT - guided full prediction (primary reading path)
 # ===========================================================================
 with tab_pred:
     pred = generate_prediction(chart, intent)
@@ -390,12 +405,12 @@ with tab_pred:
         download_label="Download full prediction (Markdown)",
         footer_caption=(
             "Hrishikesh Panchang rules applied via the same engine as Life Prediction. "
-            "For remedies and technical chart details, see Phase 3 and Evaluation tabs."
+            "For remedies and technical chart details, see Synthesis and Evaluation tabs."
         ),
     )
 
 # ===========================================================================
-# YOUR READING - plain-language, intent-focused (beginner friendly)
+# FOCUS READING - short plain-language, intent-focused view
 # ===========================================================================
 with tab0:
     reading = plain_language_reading(chart, intent)
@@ -463,8 +478,8 @@ with tab0:
     )
 
     st.caption(
-        "Want the technical details behind this? See the Phase 1-3 tabs. "
-        "Remedies (gemstones, mantras) are in Phase 3."
+        "Want the full guided report? Open the Your Report tab. "
+        "Technical chart detail is in Chart / Evaluation; remedies are in Synthesis."
     )
 
 # ===========================================================================

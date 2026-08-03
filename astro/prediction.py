@@ -251,32 +251,93 @@ def predict_from_birth(birth: BirthData, intent: str = "General reading") -> Dic
 
 
 def prediction_markdown(pred: Dict) -> str:
-    """Export user-friendly prediction as Markdown."""
+    """Export user-friendly prediction as Markdown (same reading order as the UI)."""
     lines = [
         f"# Life Prediction — {pred['name']}",
+        "",
+        "## How to read this report",
+        "1. At a glance → 2. Plain story → 3. Life areas → 4. Timing & watch points → "
+        "5. Deeper chart signals (optional) → 6. Favourable elements",
         "",
         f"> {pred.get('scope_note', fr.SCOPE_NOTE)}",
         "",
         pred.get("verdict_legend", fr.VERDICT_LEGEND),
         "",
-        "## At a glance",
+        "## 1. At a glance",
         pred.get("summary", pred.get("opening", "")),
         "",
     ]
-    for line in pred.get("birth_intro", []):
-        lines.append(f"- {line}")
+    birth_intro = pred.get("birth_intro", [])
+    if birth_intro:
+        lines.append("### Birth snapshot")
+        for line in birth_intro:
+            lines.append(f"- {line}")
+        lines.append("")
+
+    narrative = pred.get("narrative")
+    if narrative:
+        lines.append("## 2. Your story in plain words")
+        for heading, text in narrative["overview"]:
+            lines += [f"### {heading}", text, ""]
+        if narrative.get("deep_dives"):
+            lines.append("### Go deeper on one life area")
+            for area, text in narrative["deep_dives"].items():
+                lines += [f"#### {area}", text, ""]
+        if narrative.get("disclaimer"):
+            lines += [f"> {narrative['disclaimer']}", ""]
+
+    groups = pred.get("groups", fr.group_predictions(pred["life_predictions"]))
+    section_map = [
+        ("Who you are", groups.get("who_you_are", [])),
+        ("What's working well", groups.get("working_well", [])),
+        ("What needs effort & attention", groups.get("needs_effort", [])),
+    ]
+    if any(items for _, items in section_map):
+        lines.append("## 3. Life areas")
+        for section_title, items in section_map:
+            if not items:
+                continue
+            lines.append(f"### {section_title}")
+            for lp in items:
+                lines += [
+                    f"#### {lp.get('title', lp['area'])} — {lp.get('verdict', '')}",
+                    lp.get("plain", lp.get("prediction", "")),
+                    "",
+                    f"> Technical basis: {lp.get('technical', lp.get('technical_basis', ''))}",
+                    "",
+                ]
+
+    lines.append("## 4. Right now — focus, timing & watch points")
+    lines.append(f"**Your focus:** {pred['focus_intent']}")
+    for fl in pred.get("focus_friendly", []):
+        if isinstance(fl, dict):
+            lines.append(f"- {fl['plain']}")
+            if fl.get("technical"):
+                lines.append(f"  > {fl['technical']}")
+        else:
+            lines.append(f"- {fl}")
     lines.append("")
 
+    tf = pred.get("timing_friendly", fr.format_timing_plain(pred.get("timing", {})))
+    lines += ["### What's happening now", tf["plain"], "", f"> {tf['technical']}", ""]
+
+    if pred.get("cautions"):
+        lines.append("### Watch points")
+        for c in pred["cautions"]:
+            lines.append(f"- {c}")
+        lines.append("")
+
+    lines.append("## 5. Deeper chart signals (optional)")
     yogas = pred.get("yogas")
     if yogas:
-        lines.append("## Notable yogas in your chart")
+        lines.append("### Notable yogas")
         for y in yogas:
             lines.append(f"- **{y['name']}** ({y['category']}) — {y['detail']}")
         lines.append("")
 
     divisional = pred.get("divisional")
     if divisional:
-        lines.append("## Divisional charts (Vargas)")
+        lines.append("### Divisional charts (Vargas)")
         for d in divisional:
             vg = (f" · vargottama: {', '.join(d['vargottama'])}"
                   if d["vargottama"] else "")
@@ -288,68 +349,20 @@ def prediction_markdown(pred: Dict) -> str:
     if combos:
         areas = combos.get("areas", []) if isinstance(combos, dict) else combos
         nutshell = combos.get("nutshell", "") if isinstance(combos, dict) else ""
-        lines.append("## What your planetary combinations mean (in plain words)")
+        lines.append("### What your planetary combinations mean")
         if nutshell:
             lines += [f"_{nutshell}_", ""]
         for block in areas:
-            lines.append(f"### {block['area']}")
+            lines.append(f"#### {block['area']}")
             for ln in block["lines"]:
                 mark = {"good": "\u2705", "caution": "\u26a0\ufe0f"}.get(ln["tone"], "\u2022")
                 reason = f" _(Why: {ln['reason']})_" if ln.get("reason") else ""
                 lines.append(f"- {mark} {ln['text']}{reason}")
             lines.append("")
 
-    narrative = pred.get("narrative")
-    if narrative:
-        lines.append("## Your reading in plain words")
-        for heading, text in narrative["overview"]:
-            lines += [f"### {heading}", text, ""]
-        lines.append("## Ask about a specific area")
-        for area, text in narrative["deep_dives"].items():
-            lines += [f"### {area}", text, ""]
-        lines += [f"> {narrative['disclaimer']}", ""]
-
-    groups = pred.get("groups", fr.group_predictions(pred["life_predictions"]))
-    section_map = [
-        ("Who you are", groups.get("who_you_are", [])),
-        ("What's working well", groups.get("working_well", [])),
-        ("What needs effort", groups.get("needs_effort", [])),
-    ]
-    for section_title, items in section_map:
-        if not items:
-            continue
-        lines.append(f"## {section_title}")
-        for lp in items:
-            lines += [
-                f"### {lp.get('title', lp['area'])}",
-                lp.get("plain", lp.get("prediction", "")),
-                "",
-                f"> Technical basis: {lp.get('technical', lp.get('technical_basis', ''))}",
-                "",
-            ]
-
-    lines.append(f"## Your focus: {pred['focus_intent']}")
-    for fl in pred.get("focus_friendly", []):
-        if isinstance(fl, dict):
-            lines.append(f"- {fl['plain']}")
-            if fl.get("technical"):
-                lines.append(f"  > {fl['technical']}")
-        else:
-            lines.append(f"- {fl}")
-    lines.append("")
-
-    tf = pred.get("timing_friendly", fr.format_timing_plain(pred.get("timing", {})))
-    lines += ["## What's happening now (timing)", tf["plain"], "", f"> {tf['technical']}", ""]
-
-    if pred.get("cautions"):
-        lines.append("## Watch points")
-        for c in pred["cautions"]:
-            lines.append(f"- {c}")
-        lines.append("")
-
     lk = pred["lucky"]
     lines += [
-        "## Favourable elements",
+        "## 6. Favourable elements & next steps",
         f"- Weekday energy: {lk['day']}",
         f"- Birth star: {lk['nakshatra']} (lord {lk['nakshatra_lord']})",
         f"- Gemstone hint: {lk['gemstone_hint']}",

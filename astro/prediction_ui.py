@@ -37,7 +37,24 @@ def _wrap(theme: str, inner: str, *, border: str = "", muted: bool = False) -> s
     return f"<div class='{cls}' style='{style}'>{inner}</div>"
 
 
-def _render_life_block(lp: dict, theme: str, heading_level: str = "###") -> None:
+def _step_heading(n: int, title: str, theme: str) -> None:
+    """Numbered section heading so the report reads top-to-bottom."""
+    if theme == "horoscope":
+        st.markdown(
+            f"<div style='margin:22px 0 10px 0;display:flex;align-items:center;gap:12px'>"
+            f"<span style='display:inline-flex;align-items:center;justify-content:center;"
+            f"width:28px;height:28px;border-radius:999px;background:rgba(245,197,66,0.22);"
+            f"border:1px solid rgba(245,197,66,0.45);color:#ffe9a8;font-weight:700;"
+            f"font-size:13px'>{n}</span>"
+            f"<span style='font-family:Cormorant Garamond,serif;font-size:26px;"
+            f"color:#f5c542;font-weight:700'>{title}</span></div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(f"### {n}. {title}")
+
+
+def _render_life_block(lp: dict, theme: str) -> None:
     chip = _chip_class(lp["verdict"], theme)
     title = lp.get("title", lp["area"])
     plain = lp.get("plain", lp.get("prediction", ""))
@@ -49,25 +66,23 @@ def _render_life_block(lp: dict, theme: str, heading_level: str = "###") -> None
                 f"<span class='pill' style='background:{chip};color:#0b0e1a;border:none'>"
                 f"{lp['verdict']}</span>"
                 f"<b style='font-size:17px;color:#fff;display:block;margin-top:8px'>{title}</b>"
-                f"<div style='margin-top:8px;line-height:1.5'>{plain}</div>"
-                f"<div style='margin-top:10px;font-size:13px;color:#9aa3b8;border-left:3px solid "
-                f"rgba(245,197,66,0.3);padding-left:10px'>Technical basis: {technical}</div>",
+                f"<div style='margin-top:8px;line-height:1.5'>{plain}</div>",
             ),
             unsafe_allow_html=True,
         )
     else:
-        st.markdown(f"{heading_level} {title}")
-        st.markdown(f"<span class='{chip}'>{lp['verdict']}</span>", unsafe_allow_html=True)
+        st.markdown(f"**{title}** · <span class='{chip}'>{lp['verdict']}</span>",
+                    unsafe_allow_html=True)
         st.markdown(plain)
-        st.caption(f"Technical basis: {technical}")
+    if technical:
+        with st.expander("Technical basis", expanded=False):
+            st.caption(technical)
 
 
-def _render_narrative(pred: dict, theme: str, heading: str) -> None:
-    """To-the-point plain-talk reading + per-area deep dives (like an astrologer talking)."""
+def _render_narrative(pred: dict, theme: str) -> None:
     narrative = pred.get("narrative")
     if not narrative:
         return
-    st.markdown(f"{heading} Your reading in plain words")
     for sub_heading, text in narrative["overview"]:
         if theme == "horoscope":
             st.markdown(
@@ -84,17 +99,18 @@ def _render_narrative(pred: dict, theme: str, heading: str) -> None:
 
     deep = narrative.get("deep_dives", {})
     if deep:
-        st.markdown("_Want to go deeper on one area? Pick it below._")
-        area = st.selectbox(
-            "Ask about a specific area",
-            list(deep.keys()),
-            key=f"narrative_area_{theme}",
-        )
-        if theme == "horoscope":
-            st.markdown(_wrap(theme, deep[area]), unsafe_allow_html=True)
-        else:
-            st.markdown(deep[area])
-    st.caption(narrative.get("disclaimer", ""))
+        with st.expander("Go deeper on one life area", expanded=False):
+            area = st.selectbox(
+                "Choose an area",
+                list(deep.keys()),
+                key=f"narrative_area_{theme}",
+            )
+            if theme == "horoscope":
+                st.markdown(_wrap(theme, deep[area]), unsafe_allow_html=True)
+            else:
+                st.markdown(deep[area])
+    if narrative.get("disclaimer"):
+        st.caption(narrative["disclaimer"])
 
 
 _YOGA_TONE = {
@@ -104,13 +120,11 @@ _YOGA_TONE = {
 }
 
 
-def _render_yogas(pred: dict, theme: str, heading: str) -> None:
-    """Notable classical yogas found in the chart."""
+def _render_yogas(pred: dict, theme: str) -> None:
     yogas = pred.get("yogas")
     if not yogas:
         return
-    st.markdown(f"{heading} Notable yogas in your chart")
-    st.caption("Classical combinations that shape your potentials (they unfold through Dasha & transits).")
+    st.caption("Classical combinations that shape potentials (they unfold through Dasha & transits).")
     for y in yogas:
         colour, cls = _YOGA_TONE.get(y["tone"], ("#f2c94c", "chip-mix"))
         if theme == "horoscope":
@@ -131,12 +145,10 @@ def _render_yogas(pred: dict, theme: str, heading: str) -> None:
             st.markdown(y["detail"])
 
 
-def _render_divisional(pred: dict, theme: str, heading: str) -> None:
-    """Divisional-chart (Varga) highlights for key life areas."""
+def _render_divisional(pred: dict, theme: str) -> None:
     divisional = pred.get("divisional")
     if not divisional:
         return
-    st.markdown(f"{heading} Divisional charts (Vargas)")
     st.caption("Finer charts that zoom into specific life areas — D-9 marriage, "
                "D-10 career, D-7 children.")
     for d in divisional:
@@ -159,18 +171,12 @@ def _render_divisional(pred: dict, theme: str, heading: str) -> None:
             st.markdown(f"Ascendant {d['lagna_sign']}{vg}. {d['note']}")
 
 
-def _render_combinations_reading(pred: dict, theme: str, heading: str) -> None:
-    """Plain-language mapping of planetary combinations to life outcomes."""
+def _render_combinations_reading(pred: dict, theme: str) -> None:
     combos = pred.get("combinations_reading")
     if not combos:
         return
-    # Backward-compatible with the older list shape.
     nutshell = combos.get("nutshell", "") if isinstance(combos, dict) else ""
     areas = combos.get("areas", []) if isinstance(combos, dict) else combos
-
-    st.markdown(f"{heading} What your planetary combinations mean")
-    st.caption("Your placements, yogas and house-lords translated into plain, "
-               "everyday outcomes — grouped by area of life.")
 
     if isinstance(combos, dict):
         from .combinations import outcome_balance
@@ -187,27 +193,27 @@ def _render_combinations_reading(pred: dict, theme: str, heading: str) -> None:
             else f"> {nutshell}",
             unsafe_allow_html=(theme == "horoscope"),
         )
+
     tone_colour = {"good": "#6fcf97", "caution": "#eb5757", "neutral": "#f2c94c"}
     tone_mark = {"good": "\u2705", "caution": "\u26a0\ufe0f", "neutral": "\u2022"}
     for block in areas:
-        st.markdown(f"**{block['area']}**")
-        for ln in block["lines"]:
-            colour = tone_colour.get(ln["tone"], "#f2c94c")
-            mark = tone_mark.get(ln["tone"], "\u2022")
-            if theme == "horoscope":
-                st.markdown(
-                    _wrap(theme,
-                          f"<span style='color:{colour}'>{mark}</span> {ln['text']}",
-                          border="rgba(245,197,66,0.18)"),
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(f"<div style='margin:2px 0'><span style='color:{colour}'>"
-                            f"{mark}</span> {ln['text']}</div>", unsafe_allow_html=True)
-            reason = ln.get("reason")
-            if reason:
-                with st.expander("Why — the astrological reason"):
-                    st.caption(reason)
+        with st.expander(block["area"], expanded=False):
+            for ln in block["lines"]:
+                colour = tone_colour.get(ln["tone"], "#f2c94c")
+                mark = tone_mark.get(ln["tone"], "\u2022")
+                if theme == "horoscope":
+                    st.markdown(
+                        _wrap(theme,
+                              f"<span style='color:{colour}'>{mark}</span> {ln['text']}",
+                              border="rgba(245,197,66,0.18)"),
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown(f"<div style='margin:2px 0'><span style='color:{colour}'>"
+                                f"{mark}</span> {ln['text']}</div>", unsafe_allow_html=True)
+                reason = ln.get("reason")
+                if reason:
+                    st.caption(f"Why: {reason}")
 
 
 def render_prediction_results(
@@ -220,12 +226,31 @@ def render_prediction_results(
     download_label: str = "Download prediction report (Markdown)",
     footer_caption: Optional[str] = None,
 ) -> None:
-    """Render user-friendly prediction (Rules 1–10)."""
-    heading = "####" if theme == "horoscope" else "###"
+    """Render a guided, top-to-bottom prediction report for a layman reader."""
     rk = pred.get("rishikesh", {})
 
-    # Rule 8: scope note up front
-    st.info(pred.get("scope_note", ""))
+    # ---- Reading roadmap ----
+    st.markdown(
+        _wrap(
+            theme,
+            "<b style='color:#ffe9a8'>How to read this report</b>"
+            "<div style='margin-top:8px;line-height:1.6'>"
+            "1. Start with the summary &middot; "
+            "2. Read the plain-language story &middot; "
+            "3. Scan life areas by verdict &middot; "
+            "4. Check timing &amp; watch points &middot; "
+            "5. Open deeper chart signals only if you want the why."
+            "</div>"
+            f"<div style='margin-top:10px;font-size:13px;color:#9aa3b8'>"
+            f"{pred.get('scope_note', '')}</div>",
+            border="rgba(245,197,66,0.35)",
+        ) if theme == "horoscope" else (
+            f"**How to read this report**\n\n"
+            f"1. Summary → 2. Plain story → 3. Life areas → 4. Timing → 5. Deeper signals (optional)\n\n"
+            f"{pred.get('scope_note', '')}"
+        ),
+        unsafe_allow_html=(theme == "horoscope"),
+    )
 
     if show_header:
         name = pred["name"] or "Native"
@@ -244,78 +269,106 @@ def render_prediction_results(
         else:
             st.markdown(f"# \U0001f52e {name}")
 
-    # Rule 9: verdict scale once
-    with st.expander("How to read verdicts", expanded=False):
+    with st.expander("How to read verdicts (Supported / Mixed / Challenged)", expanded=False):
         st.markdown(pred.get("verdict_legend", ""))
 
-    # Rule 10: short summary
-    st.markdown(f"{heading} At a glance")
+    # ---- 1. At a glance ----
+    _step_heading(1, "At a glance", theme)
     st.markdown(pred.get("summary", pred.get("opening", "")))
+    birth_intro = pred.get("birth_intro", [])
+    if birth_intro:
+        st.markdown("**Birth snapshot**")
+        for line in birth_intro:
+            st.markdown(f"- {line}")
 
-    for line in pred.get("birth_intro", []):
-        st.markdown(f"- {line}")
+    # ---- 2. Plain-language story ----
+    if pred.get("narrative"):
+        _step_heading(2, "Your story in plain words", theme)
+        _render_narrative(pred, theme)
 
-    _render_narrative(pred, theme, heading)
-
-    _render_yogas(pred, theme, heading)
-
-    _render_divisional(pred, theme, heading)
-
-    _render_combinations_reading(pred, theme, heading)
-
-    if rk and show_technical_panchang:
-        nav = rk["navaratna"]
-        st.markdown(f"{heading} Birth quality (Panchang)")
-        st.caption(
-            f"{nav['verdict']} — {nav['percent']}% "
-            f"(scores above 70% are strongly favorable). "
-            f"Ishtakal: {rk['ishtakal']['formatted']} after sunrise."
-        )
-
+    # ---- 3. Life areas by group ----
     groups = pred.get("groups", {})
     group_titles = [
         ("Who you are", groups.get("who_you_are", [])),
         ("What's working well", groups.get("working_well", [])),
         ("What needs effort & attention", groups.get("needs_effort", [])),
     ]
-    for gtitle, items in group_titles:
-        if not items:
-            continue
-        st.markdown(f"{heading} {gtitle}")
-        for lp in items:
-            _render_life_block(lp, theme, heading)
+    if any(items for _, items in group_titles):
+        _step_heading(3, "Life areas", theme)
+        st.caption("Each card is one area of life. Open “Technical basis” only if you want the chart reason.")
+        for gtitle, items in group_titles:
+            if not items:
+                continue
+            with st.expander(gtitle, expanded=(gtitle == "Who you are")):
+                for lp in items:
+                    _render_life_block(lp, theme)
 
-    st.markdown(f"{heading} Your focus: {pred['focus_intent']}")
+    # ---- 4. Focus + timing + cautions ----
+    _step_heading(4, "Right now — focus, timing & watch points", theme)
+    st.markdown(f"**Your focus:** {pred['focus_intent']}")
     for fl in pred.get("focus_friendly", pred.get("focus_detail", [])):
         if isinstance(fl, dict):
-            st.markdown(fl["plain"])
+            st.markdown(f"- {fl['plain']}")
             if fl.get("technical"):
-                st.caption(f"Technical basis: {fl['technical']}")
+                st.caption(f"  Technical: {fl['technical']}")
         else:
             st.markdown(f"- {fl}")
 
-    st.markdown(f"{heading} What's happening now")
     tf = pred.get("timing_friendly", {})
+    st.markdown("**What's happening now**")
     st.markdown(tf.get("plain", ""))
     if tf.get("technical"):
-        st.caption(f"Technical basis: {tf['technical']}")
+        with st.expander("Timing technical basis", expanded=False):
+            st.caption(tf["technical"])
 
     if pred.get("cautions"):
-        st.markdown(f"{heading} Watch points")
+        st.markdown("**Watch points**")
         for c in pred["cautions"]:
             if theme == "horoscope":
-                st.markdown(_wrap(theme, c, border="rgba(239,107,107,0.3)"), unsafe_allow_html=True)
+                st.markdown(_wrap(theme, c, border="rgba(239,107,107,0.3)"),
+                            unsafe_allow_html=True)
             else:
                 st.warning(c)
 
+    # ---- 5. Deeper signals (collapsed) ----
+    _step_heading(5, "Deeper chart signals (optional)", theme)
+    st.caption("Open these only if you want the underlying yogas, vargas, and combination details.")
+
+    with st.expander("Notable yogas", expanded=False):
+        if pred.get("yogas"):
+            _render_yogas(pred, theme)
+        else:
+            st.caption("No notable yogas flagged for this chart.")
+
+    with st.expander("Divisional charts (Vargas)", expanded=False):
+        if pred.get("divisional"):
+            _render_divisional(pred, theme)
+        else:
+            st.caption("No divisional highlights available.")
+
+    with st.expander("What your planetary combinations mean", expanded=False):
+        if pred.get("combinations_reading"):
+            _render_combinations_reading(pred, theme)
+        else:
+            st.caption("No combination reading available.")
+
+    if rk and show_technical_panchang:
+        with st.expander("Birth quality (Panchang)", expanded=False):
+            nav = rk["navaratna"]
+            st.caption(
+                f"{nav['verdict']} — {nav['percent']}% "
+                f"(scores above 70% are strongly favorable). "
+                f"Ishtakal: {rk['ishtakal']['formatted']} after sunrise."
+            )
+
+    # ---- 6. Favourable + remedies + download ----
+    _step_heading(6, "Favourable elements & next steps", theme)
     lk = pred["lucky"]
-    st.markdown(f"{heading} Favourable elements")
     st.markdown(
         f"Weekday **{lk['day']}** · Birth star **{lk['nakshatra']}** "
         f"(lord {lk['nakshatra_lord']}) · Gemstone hint: {lk['gemstone_hint']}"
     )
-
-    st.markdown(f"{heading} Remedies")
+    st.markdown("**Remedies**")
     st.caption(pred.get("remedies_note", ""))
 
     if show_download:

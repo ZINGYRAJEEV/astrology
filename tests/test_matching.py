@@ -27,6 +27,10 @@ def test_match_structure():
     assert m["groom"]["avakhada"]["nadi"]
     assert m["bride"]["avakhada"]["gana"]
     assert m["verdict"]
+    assert len(m["groom"]["life_scores"]) >= 5
+    assert len(m["bride"]["life_scores"]) >= 5
+    assert 0 <= m["groom"]["area_avg"] <= 100
+    assert 0 <= m["bride"]["area_avg"] <= 100
     print(f"Score: {m['total_points']}/36 ({m['verdict']})")
 
 
@@ -46,6 +50,7 @@ def test_matching_markdown():
     md = matching_markdown(m)
     assert "Ashtakoota" in md
     assert "Nadi" in md
+    assert "spiderweb scores" in md
     assert len(md) > 400
 
 

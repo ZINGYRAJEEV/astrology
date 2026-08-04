@@ -90,11 +90,14 @@ def birth_intro_lines(
     moon_nak: str, moon_pada: int,
 ) -> List[str]:
     who = name or "You"
+    from . import reference as _ref
     return [
         f"{who} was born on {_fmt_date(birth['day'], birth['month'], birth['year'])} "
         f"at {_fmt_time(birth['hour'], birth['minute'])} in {birth.get('place') or 'your birthplace'}.",
-        f"Your **Ascendant** (rising sign — shapes outward personality) is **{chart_lagna}**.",
-        f"Your **Moon sign** (inner emotional nature) is **{moon_sign}**, "
+        f"Your **Ascendant** (rising sign — shapes outward personality) is "
+        f"**{_ref.sign_label(chart_lagna)}**.",
+        f"Your **{_ref.planet_label('Moon')} sign** (inner emotional nature) is "
+        f"**{_ref.sign_label(moon_sign)}**, "
         f"in the lunar mansion **{moon_nak}** (pada {moon_pada}).",
     ]
 
@@ -195,26 +198,30 @@ def format_focus_line(house_num: int, report: HouseReport) -> Dict[str, str]:
 
 
 def format_timing_plain(timing: dict) -> Dict[str, str]:
+    from . import reference as _ref
     plain_parts = []
     if timing.get("current_maha"):
-        maha = timing["current_maha"]
+        maha = _ref.planet_label(timing["current_maha"])
         antar = timing.get("current_antar")
+        antar_l = _ref.planet_label(antar) if antar else None
         plain_parts.append(
             f"You are in **{maha} Mahadasha**"
-            + (f" with **{antar} Antardasha**" if antar else "")
+            + (f" with **{antar_l} Antardasha**" if antar_l else "")
             + " — a major life chapter shaped by that planet's themes."
         )
     if timing.get("year_ahead"):
-        plain_parts.append(timing["year_ahead"])
+        plain_parts.append(_ref.with_hindi_planets(timing["year_ahead"]))
     if timing.get("sade_sati") and "Not in" not in timing["sade_sati"]:
         plain_parts.append(
-            f"Saturn's Sade Sati phase: {timing['sade_sati']} — a period of testing and maturity."
+            f"{_ref.planet_label('Saturn')}'s Sade Sati phase: {timing['sade_sati']} "
+            f"— a period of testing and maturity."
         )
     if timing.get("guru_gochar"):
-        plain_parts.append(timing["guru_gochar"])
+        plain_parts.append(_ref.with_hindi_planets(timing["guru_gochar"]))
+    dasha_lord = timing.get("birth_nakshatra_lord")
     technical = (
         f"Birth Nakshatra {timing.get('birth_nakshatra')} "
-        f"(Dasha lord {timing.get('birth_nakshatra_lord')}). "
+        f"(Dasha lord {_ref.planet_label(dasha_lord) if dasha_lord else '—'}). "
         f"Dasha balance at birth: {timing.get('dasha_balance_years', '—')} years."
     )
     return {
@@ -263,7 +270,17 @@ def enrich_prediction(pred: dict, birth_raw: dict) -> dict:
         pred["name"], pred["life_predictions"], nav_pct, pred["focus_intent"],
     )
     pred["groups"] = group_predictions(pred["life_predictions"])
-    pred["timing_friendly"] = format_timing_plain(pred.get("timing", {}))
+    from . import reference as _ref
+    tf = format_timing_plain(pred.get("timing", {}))
+    pred["timing_friendly"] = {
+        k: (_ref.with_hindi_planets(v) if isinstance(v, str) else v)
+        for k, v in tf.items()
+    }
+    pred["lucky"] = dict(pred.get("lucky", {}))
+    if pred["lucky"].get("nakshatra_lord"):
+        pred["lucky"]["nakshatra_lord"] = _ref.planet_label(pred["lucky"]["nakshatra_lord"])
+    if pred["lucky"].get("gemstone_hint"):
+        pred["lucky"]["gemstone_hint"] = _ref.with_hindi_planets(pred["lucky"]["gemstone_hint"])
     pred["remedies_note"] = (
         f"Open **Horoscope & Reading → Phase 3** for {pred.get('remedies_count', 0)} "
         "detailed remedial measures (Upaye) — not included in this download."

@@ -9,6 +9,7 @@ import streamlit as st
 from astro import geo
 from astro.chart_engine import BirthData
 from astro.matching import match_from_birth, matching_markdown
+from astro.report_viz import spiderweb_figure, spiderweb_overlay_figure, spiderweb_svg
 
 st.set_page_config(page_title="Horoscope Matching", page_icon="\U0001f491", layout="wide")
 
@@ -147,12 +148,75 @@ for col, person, label in [(g_col, m["groom"], "Groom"), (b_col, m["bride"], "Br
             Lagna <b>{person['lagna']}</b> · Moon <b>{person['moon_sign']}</b><br>
             {person['nakshatra']} (pada {person['pada']}) · {mang}<br>
             Varna {av['varna']} · Gana {av['gana']} · Nadi {av['nadi']} · Yoni {av['yoni']}<br>
-            Navaratna birth quality: {person['navaratna']}%
+            Navaratna birth quality: {person['navaratna']}% ·
+            Area strength avg: {person.get('area_avg', '—')}/100
           </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
+# ---- Life-area spiderwebs (bride & groom) ----
+st.markdown("### Life-area strength maps")
+st.caption(
+    "Spiderweb of Self, Wealth, Career, Love, Health and Spirit for each partner — "
+    "scan the shapes side by side, then the overlay comparison below."
+)
+
+g_scores = m["groom"].get("life_scores", [])
+b_scores = m["bride"].get("life_scores", [])
+
+sw1, sw2 = st.columns(2)
+with sw1:
+    g_fig = spiderweb_figure(
+        scores=g_scores, theme="horoscope",
+        title=f"{m['groom_name']} — strength map",
+        line_color="#56a0ff", fill_color="rgba(86,160,255,0.28)",
+    )
+    if g_fig is not None:
+        st.plotly_chart(g_fig, use_container_width=True, config={"displayModeBar": False})
+    else:
+        st.markdown(
+            spiderweb_svg(
+                scores=g_scores, theme="horoscope",
+                title=f"{m['groom_name']} — strength map", line_color="#56a0ff",
+            ),
+            unsafe_allow_html=True,
+        )
+    st.dataframe(
+        [{"Area": s["area"], "Strength": s["score"], "Verdict": s["verdict"]} for s in g_scores],
+        hide_index=True, use_container_width=True,
+    )
+with sw2:
+    b_fig = spiderweb_figure(
+        scores=b_scores, theme="horoscope",
+        title=f"{m['bride_name']} — strength map",
+        line_color="#f5c542", fill_color="rgba(245,197,66,0.28)",
+    )
+    if b_fig is not None:
+        st.plotly_chart(b_fig, use_container_width=True, config={"displayModeBar": False})
+    else:
+        st.markdown(
+            spiderweb_svg(
+                scores=b_scores, theme="horoscope",
+                title=f"{m['bride_name']} — strength map", line_color="#f5c542",
+            ),
+            unsafe_allow_html=True,
+        )
+    st.dataframe(
+        [{"Area": s["area"], "Strength": s["score"], "Verdict": s["verdict"]} for s in b_scores],
+        hide_index=True, use_container_width=True,
+    )
+
+overlay = spiderweb_overlay_figure(
+    g_scores, b_scores,
+    groom_name=m["groom_name"], bride_name=m["bride_name"],
+    theme="horoscope",
+)
+if overlay is not None:
+    st.plotly_chart(overlay, use_container_width=True, config={"displayModeBar": False})
+else:
+    st.caption("Overlay chart needs Plotly; individual SVG maps above still show each partner.")
 
 st.markdown("### Ashtakoota breakdown")
 for k in m["kootas"]:

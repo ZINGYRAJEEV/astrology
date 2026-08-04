@@ -26,6 +26,7 @@ from .dasha_calc import compute_vimshottari, current_dasha, starting_nakshatra, 
 from .rishikesh_prediction import analyze_rishikesh_birth
 from . import friendly_report as fr
 from .narrative import build_narrative
+from .nature_profile import build_nature_profile
 from .yogas import detect_yogas
 from .vargas import reading_highlights
 from .combinations import layman_outcomes
@@ -210,10 +211,45 @@ def generate_prediction(
             for r in remedies[:4]
         ],
         "weak_planets": foundation["debilitated"],
-        "yogas": detect_yogas(chart),
-        "divisional": reading_highlights(chart),
+        "yogas": [
+            {**y, "name": ref.with_hindi_planets(y["name"]),
+             "detail": ref.with_hindi_planets(y["detail"])}
+            for y in detect_yogas(chart)
+        ],
+        "divisional": [
+            {**d, "note": ref.with_hindi_planets(d.get("note", "")),
+             "vargottama": [ref.planet_label(p) for p in d.get("vargottama", [])]}
+            for d in reading_highlights(chart)
+        ],
         "combinations_reading": layman_outcomes(chart),
+        "nature_profile": build_nature_profile(chart),
     }
+    # Annotate remaining English planet names with Hindi for bilingual readers.
+    for lp in result["life_predictions"]:
+        for key in ("plain", "technical", "prediction", "technical_basis", "title"):
+            if lp.get(key):
+                lp[key] = ref.with_hindi_planets(lp[key])
+    combos = result["combinations_reading"]
+    if isinstance(combos, dict):
+        if combos.get("nutshell"):
+            combos["nutshell"] = ref.with_hindi_planets(combos["nutshell"])
+        for block in combos.get("areas", []):
+            for ln in block.get("lines", []):
+                if ln.get("text"):
+                    ln["text"] = ref.with_hindi_planets(ln["text"])
+                if ln.get("reason"):
+                    ln["reason"] = ref.with_hindi_planets(ln["reason"])
+    for fl in result.get("focus_friendly", []):
+        if isinstance(fl, dict):
+            for key in ("plain", "technical"):
+                if fl.get(key):
+                    fl[key] = ref.with_hindi_planets(fl[key])
+    result["cautions"] = [ref.with_hindi_planets(c) for c in result.get("cautions", [])]
+    for rem in result.get("remedies_summary", []):
+        rem["planet"] = ref.planet_label(rem["planet"])
+        if rem.get("rationale"):
+            rem["rationale"] = ref.with_hindi_planets(rem["rationale"])
+
     # Rebuild summary now that life_predictions exist.
     result["summary"] = fr.build_summary(
         result["name"], life_predictions, rishikesh["navaratna"]["percent"], intent,
@@ -256,15 +292,19 @@ def prediction_markdown(pred: Dict) -> str:
         f"# Life Prediction — {pred['name']}",
         "",
         "## How to read this report",
-        "1. At a glance → 2. Plain story → 3. Life areas → 4. Timing & watch points → "
-        "5. Deeper chart signals (optional) → 6. Favourable elements",
+        "1. At a glance → 2. Nature & behaviour → 3. Plain story → 4. Life areas → "
+        "5. Timing & watch points → 6. Deeper chart signals (optional) → 7. Favourable elements",
         "",
         f"> {pred.get('scope_note', fr.SCOPE_NOTE)}",
         "",
         pred.get("verdict_legend", fr.VERDICT_LEGEND),
         "",
-        "## Life-area strength map (spiderweb scores)",
+        "## Planet names (English / हिंदी)",
     ]
+    for eng in ref.PLANETS:
+        lines.append(f"- **{eng}** — {ref.PLANET_HINDI[eng]} ({ref.PLANET_SANSKRIT[eng]})")
+    lines.append("")
+    lines.append("## Life-area strength map (spiderweb scores)")
     from .report_viz import life_area_scores
     for row in life_area_scores(pred):
         lines.append(f"- **{row['area']}**: {row['score']}/100 ({row['verdict']})")
@@ -281,9 +321,30 @@ def prediction_markdown(pred: Dict) -> str:
             lines.append(f"- {line}")
         lines.append("")
 
+    profile = pred.get("nature_profile")
+    if profile:
+        lines.append("## 2. Your nature & behaviour")
+        lines += [profile["portrait"], ""]
+        if profile.get("traits"):
+            lines.append("### Key nature traits")
+            for t in profile["traits"]:
+                lines.append(f"- {t}")
+            lines.append("")
+        lines.append("### How each planet shapes your behaviour")
+        for pl in profile.get("placements", []):
+            lines.append(
+                f"#### {pl['label']} · {pl['house']}th house · {pl['sign_label']}"
+            )
+            lines.append(pl["nature"])
+            if pl.get("behaviour_strengths"):
+                lines.append(f"- Strengths: {pl['behaviour_strengths']}")
+            if pl.get("behaviour_cautions"):
+                lines.append(f"- Watch for: {pl['behaviour_cautions']}")
+            lines.append("")
+
     narrative = pred.get("narrative")
     if narrative:
-        lines.append("## 2. Your story in plain words")
+        lines.append("## 3. Your story in plain words")
         for heading, text in narrative["overview"]:
             lines += [f"### {heading}", text, ""]
         if narrative.get("deep_dives"):
@@ -300,7 +361,7 @@ def prediction_markdown(pred: Dict) -> str:
         ("What needs effort & attention", groups.get("needs_effort", [])),
     ]
     if any(items for _, items in section_map):
-        lines.append("## 3. Life areas")
+        lines.append("## 4. Life areas")
         for section_title, items in section_map:
             if not items:
                 continue
@@ -314,7 +375,7 @@ def prediction_markdown(pred: Dict) -> str:
                     "",
                 ]
 
-    lines.append("## 4. Right now — focus, timing & watch points")
+    lines.append("## 5. Right now — focus, timing & watch points")
     lines.append(f"**Your focus:** {pred['focus_intent']}")
     for fl in pred.get("focus_friendly", []):
         if isinstance(fl, dict):
@@ -334,7 +395,7 @@ def prediction_markdown(pred: Dict) -> str:
             lines.append(f"- {c}")
         lines.append("")
 
-    lines.append("## 5. Deeper chart signals (optional)")
+    lines.append("## 6. Deeper chart signals (optional)")
     yogas = pred.get("yogas")
     if yogas:
         lines.append("### Notable yogas")
@@ -369,7 +430,7 @@ def prediction_markdown(pred: Dict) -> str:
 
     lk = pred["lucky"]
     lines += [
-        "## 6. Favourable elements & next steps",
+        "## 7. Favourable elements & next steps",
         f"- Weekday energy: {lk['day']}",
         f"- Birth star: {lk['nakshatra']} (lord {lk['nakshatra_lord']})",
         f"- Gemstone hint: {lk['gemstone_hint']}",

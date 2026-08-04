@@ -225,6 +225,10 @@ def match_charts(
     if g_rk["navaratna"]["percent"] < 50 or b_rk["navaratna"]["percent"] < 50:
         recommendations.append("One or both Navaratna birth scores are low — strengthen weak limbs before marriage.")
 
+    from .report_viz import chart_life_area_scores
+    g_scores = chart_life_area_scores(groom_chart)
+    b_scores = chart_life_area_scores(bride_chart)
+
     return {
         "groom_name": groom_name,
         "bride_name": bride_name,
@@ -236,6 +240,8 @@ def match_charts(
             "avakhada": g_ava,
             "navaratna": g_rk["navaratna"]["percent"],
             "manglik": g_mang["active"],
+            "life_scores": g_scores,
+            "area_avg": round(sum(s["score"] for s in g_scores) / len(g_scores)) if g_scores else 0,
         },
         "bride": {
             "lagna": bride_chart.lagna_sign,
@@ -245,6 +251,8 @@ def match_charts(
             "avakhada": b_ava,
             "navaratna": b_rk["navaratna"]["percent"],
             "manglik": b_mang["active"],
+            "life_scores": b_scores,
+            "area_avg": round(sum(s["score"] for s in b_scores) / len(b_scores)) if b_scores else 0,
         },
         "kootas": kootas,
         "total_points": round(total, 1),
@@ -293,12 +301,26 @@ def matching_markdown(m: Dict) -> str:
         f"{m['groom']['nakshatra']} (pada {m['groom']['pada']})",
         f"- Avakhada: {m['groom']['avakhada']['varna']} / {m['groom']['avakhada']['gana']} / "
         f"{m['groom']['avakhada']['nadi']} Nadi · Navaratna {m['groom']['navaratna']}%",
+        f"- Life-area strength (avg): {m['groom'].get('area_avg', '—')}/100",
+        "",
+        "### Groom life-area spiderweb scores",
+    ]
+    for s in m["groom"].get("life_scores", []):
+        lines.append(f"- **{s['area']}**: {s['score']}/100 ({s['verdict']})")
+    lines += [
         "",
         "## Bride",
         f"- Lagna {m['bride']['lagna']} · Moon {m['bride']['moon_sign']} · "
         f"{m['bride']['nakshatra']} (pada {m['bride']['pada']})",
         f"- Avakhada: {m['bride']['avakhada']['varna']} / {m['bride']['avakhada']['gana']} / "
         f"{m['bride']['avakhada']['nadi']} Nadi · Navaratna {m['bride']['navaratna']}%",
+        f"- Life-area strength (avg): {m['bride'].get('area_avg', '—')}/100",
+        "",
+        "### Bride life-area spiderweb scores",
+    ]
+    for s in m["bride"].get("life_scores", []):
+        lines.append(f"- **{s['area']}**: {s['score']}/100 ({s['verdict']})")
+    lines += [
         "",
         "## Ashtakoota (36 Gun Milan)",
     ]

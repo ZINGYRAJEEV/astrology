@@ -79,20 +79,21 @@ def _foundation(name, lagna, moon_sign, nak, pada, nav_percent, nav_verdict) -> 
         else "a baseline that needs conscious support"
     )
     return (
-        f"{lead} a **{lagna} Ascendant** with **Moon in {moon_sign}** "
+        f"{lead} a **{ref.sign_label(lagna)} Ascendant** with "
+        f"**{ref.planet_label('Moon')} in {ref.sign_label(moon_sign)}** "
         f"({nak} nakshatra, pada {pada}). That pairs a {asc} outer nature "
         f"with a {inner} inner drive. Your birth-quality score is "
         f"**{nav_percent:.0f}% ({nav_verdict})** — {scale} in this tradition, "
-        f"where Moon strength (Chandrabala) is the single heaviest-weighted factor."
+        f"where {ref.planet_label('Moon')} strength (Chandrabala) is the single "
+        f"heaviest-weighted factor."
     )
 
 
 def _area_line(area_name: str, house_num: int, houses) -> str:
     r = houses[house_num]
-    lord = r.lord
-    dom = PLANET_DOMAIN.get(lord, "its themes")
+    lord = ref.planet_label(r.lord)
     return (
-        f"**{area_name}** — {r.lord} rules this area and is {dignity_phrase(r.lord_dignity)}, "
+        f"**{area_name}** — {lord} rules this area and is {dignity_phrase(r.lord_dignity)}, "
         f"placed in house {r.lord_house} (support score {r.sav_points}/56)."
     )
 
@@ -102,18 +103,20 @@ def _timing(timing: dict) -> str:
     antar = timing.get("current_antar")
     if not maha:
         return "Current planetary period (Dasha) data is unavailable."
+    maha_l = ref.planet_label(maha)
+    antar_l = ref.planet_label(antar) if antar else None
     parts = [
-        f"You are in a **{maha} Mahadasha**"
-        + (f" with **{antar} Antardasha**" if antar else "")
+        f"You are in a **{maha_l} Mahadasha**"
+        + (f" with **{antar_l} Antardasha**" if antar_l else "")
         + "."
     ]
     parts.append(
-        f"{maha} (the larger period) sets the broad theme of these years — "
+        f"{maha_l} (the larger period) sets the broad theme of these years — "
         f"{DASHA_THEME.get(maha, 'karmic growth')}."
     )
     if antar and antar != maha:
         parts.append(
-            f"{antar} (the current sub-period) is the flavour layered on top right now — "
+            f"{antar_l} (the current sub-period) is the flavour layered on top right now — "
             f"{DASHA_THEME.get(antar, 'inner change')}."
         )
     ss = timing.get("sade_sati", "")
@@ -134,7 +137,10 @@ def _watch(weak_planets: List[str]) -> str:
         )
     lines = []
     for p in weak_planets:
-        lines.append(f"**{p}** (debilitated — weakest sign placement), tied to {PLANET_DOMAIN.get(p, 'its themes')}")
+        lines.append(
+            f"**{ref.planet_label(p)}** (debilitated — weakest sign placement), "
+            f"tied to {PLANET_DOMAIN.get(p, 'its themes')}"
+        )
     joined = "; ".join(lines)
     return (
         f"The chart points to {joined}. This tradition suggests planet-specific "
@@ -145,10 +151,11 @@ def _watch(weak_planets: List[str]) -> str:
 def _deep_dive_health(houses, nadi, nadi_meaning, yoga_name, yoga_quality, yoga_note) -> str:
     r = houses[6]
     lord = r.lord
+    lord_l = ref.planet_label(lord)
     health_dom = PLANET_HEALTH.get(lord, "its associated organs")
     weak = r.lord_dignity in _WEAK_DIGNITIES
     verdict_line = (
-        f"Your health house (6th, Ripu) is ruled by **{lord}**, which is "
+        f"Your health house (6th, Ripu) is ruled by **{lord_l}**, which is "
         f"{dignity_phrase(r.lord_dignity)} in house {r.lord_house}. "
     )
     if weak:
@@ -168,7 +175,7 @@ def _deep_dive_health(houses, nadi, nadi_meaning, yoga_name, yoga_quality, yoga_
         )
     )
     domain_line = (
-        f"A stressed {lord} classically points to care around {health_dom}. "
+        f"A stressed {lord_l} classically points to care around {health_dom}. "
     )
     const_line = (
         f"Your constitution is **{nadi} Nadi** — {nadi_meaning}. "
@@ -195,25 +202,26 @@ def _deep_dive_health(houses, nadi, nadi_meaning, yoga_name, yoga_quality, yoga_
 def _deep_dive_generic(title: str, house_num: int, houses, extra: str = "") -> str:
     r = houses[house_num]
     lord = r.lord
+    lord_l = ref.planet_label(lord)
     dom = PLANET_DOMAIN.get(lord, "its themes")
     weak = r.lord_dignity in _WEAK_DIGNITIES
     strong = r.lord_dignity in ("Exalted", "Own Sign", "Moolatrikona")
     verdict = r.verdict
     line = (
-        f"Your {title.lower()} area is **{verdict}**. It's ruled by **{lord}** "
+        f"Your {title.lower()} area is **{verdict}**. It's ruled by **{lord_l}** "
         f"({dignity_phrase(r.lord_dignity)}) in house {r.lord_house}, "
         f"with {bindu_context(r.sav_points)} of support. "
     )
     if strong:
-        line += f"{lord} is well placed, so this reads as a natural strength rather than a forced effort. "
+        line += f"{lord_l} is well placed, so this reads as a natural strength rather than a forced effort. "
     elif weak:
         line += (
-            f"Because {lord} is weak, this area won't run on autopilot — "
+            f"Because {lord_l} is weak, this area won't run on autopilot — "
             f"be realistic and consistent rather than assuming it will sort itself out. "
         )
     else:
         line += "The placement is workable; your choices and timing shape the outcome. "
-    line += f"{lord} governs {dom}. "
+    line += f"{lord_l} governs {dom}. "
     if extra:
         line += extra
     return line.strip()

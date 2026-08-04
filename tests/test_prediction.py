@@ -60,11 +60,14 @@ def test_predict_from_birth():
     assert "How to read this report" in md
     assert "Life-area strength map" in md
     assert "1. At a glance" in md
-    assert "2. Your story in plain words" in md
-    assert "3. Life areas" in md
-    assert "4. Right now" in md
-    assert "5. Deeper chart signals" in md
-    assert "6. Favourable elements" in md
+    assert "2. Your nature & behaviour" in md
+    assert "3. Your story in plain words" in md
+    assert "4. Life areas" in md
+    assert "5. Right now" in md
+    assert "6. Deeper chart signals" in md
+    assert "7. Favourable elements" in md
+    assert "सूर्य" in md or "Sun (सूर्य)" in md
+    assert "nature_profile" in pred and len(pred["nature_profile"]["placements"]) == 9
     assert "Technical basis" in md
     assert "How to read verdicts" in md or "Supported" in md
     assert "Go deeper on one life area" in md

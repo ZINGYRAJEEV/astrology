@@ -79,6 +79,48 @@ def _render_life_block(lp: dict, theme: str) -> None:
             st.caption(technical)
 
 
+def _render_nature_profile(pred: dict, theme: str) -> None:
+    """Portrait of nature & behaviour from planet-in-house placements."""
+    profile = pred.get("nature_profile")
+    if not profile:
+        return
+    st.caption(
+        "Planet names include Hindi (e.g. Sun / सूर्य) for bilingual readers. "
+        "Behaviour notes come from each planet’s house placement in your chart."
+    )
+    if theme == "horoscope":
+        st.markdown(
+            _wrap(
+                theme,
+                f"<b style='color:#ffe9a8'>Who you are</b>"
+                f"<div style='margin-top:8px;line-height:1.65'>{profile['portrait']}</div>",
+                border="rgba(245,197,66,0.35)",
+            ),
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(profile["portrait"])
+
+    if profile.get("traits"):
+        st.markdown("**Key nature traits**")
+        for t in profile["traits"]:
+            st.markdown(f"- {t}")
+
+    st.markdown("**How each planet shapes your behaviour**")
+    for pl in profile.get("placements", []):
+        title = (
+            f"{pl['label']} · {pl['house']}th house · {pl['sign_label']}"
+            + (" · retrograde" if pl.get("retrograde") else "")
+        )
+        with st.expander(title, expanded=False):
+            st.markdown(pl["nature"])
+            if pl.get("behaviour_strengths"):
+                st.markdown(f"**Behavioural strengths:** {pl['behaviour_strengths']}")
+            if pl.get("behaviour_cautions"):
+                st.markdown(f"**Watch for:** {pl['behaviour_cautions']}")
+            st.caption(f"Dignity: {pl['dignity']} · Influences {pl['house_theme']}")
+
+
 def _render_narrative(pred: dict, theme: str) -> None:
     narrative = pred.get("narrative")
     if not narrative:
@@ -293,18 +335,19 @@ def render_prediction_results(
             "<b style='color:#ffe9a8'>How to read this report</b>"
             "<div style='margin-top:8px;line-height:1.6'>"
             "1. Scan the spiderweb &amp; metrics &middot; "
-            "2. Read the plain-language story &middot; "
-            "3. Open life-area cards by verdict &middot; "
-            "4. Check timing &amp; watch points &middot; "
-            "5. Open deeper chart signals only if you want the why."
+            "2. Read your nature &amp; behaviour &middot; "
+            "3. Plain-language story &middot; "
+            "4. Life-area cards &middot; "
+            "5. Timing &amp; watch points &middot; "
+            "6. Deeper signals (optional)."
             "</div>"
             f"<div style='margin-top:10px;font-size:13px;color:#9aa3b8'>"
             f"{pred.get('scope_note', '')}</div>",
             border="rgba(245,197,66,0.35)",
         ) if theme == "horoscope" else (
             f"**How to read this report**\n\n"
-            f"1. Spiderweb & metrics → 2. Plain story → 3. Life areas → "
-            f"4. Timing → 5. Deeper signals (optional)\n\n"
+            f"1. Spiderweb & metrics → 2. Nature & behaviour → 3. Plain story → "
+            f"4. Life areas → 5. Timing → 6. Deeper signals (optional)\n\n"
             f"{pred.get('scope_note', '')}"
         ),
         unsafe_allow_html=(theme == "horoscope"),
@@ -312,6 +355,17 @@ def render_prediction_results(
 
     with st.expander("How to read verdicts (Supported / Mixed / Challenged)", expanded=False):
         st.markdown(pred.get("verdict_legend", ""))
+
+    with st.expander("Planet names in Hindi / अंग्रेज़ी–हिंदी ग्रह नाम", expanded=False):
+        from . import reference as _ref
+        rows = [
+            f"- **{eng}** — {_ref.PLANET_HINDI[eng]} ({_ref.PLANET_SANSKRIT[eng]})"
+            for eng in _ref.PLANETS
+        ]
+        st.markdown(
+            "Throughout this report, planets appear as **English (हिंदी)** "
+            "so Hindi readers can follow easily.\n\n" + "\n".join(rows)
+        )
 
     # ---- 1. At a glance ----
     _step_heading(1, "At a glance", theme)
@@ -322,12 +376,17 @@ def render_prediction_results(
         for line in birth_intro:
             st.markdown(f"- {line}")
 
-    # ---- 2. Plain-language story ----
+    # ---- 2. Nature & behaviour ----
+    if pred.get("nature_profile"):
+        _step_heading(2, "Your nature & behaviour", theme)
+        _render_nature_profile(pred, theme)
+
+    # ---- 3. Plain-language story ----
     if pred.get("narrative"):
-        _step_heading(2, "Your story in plain words", theme)
+        _step_heading(3, "Your story in plain words", theme)
         _render_narrative(pred, theme)
 
-    # ---- 3. Life areas by group ----
+    # ---- 4. Life areas by group ----
     groups = pred.get("groups", {})
     group_titles = [
         ("Who you are", groups.get("who_you_are", [])),
@@ -335,7 +394,7 @@ def render_prediction_results(
         ("What needs effort & attention", groups.get("needs_effort", [])),
     ]
     if any(items for _, items in group_titles):
-        _step_heading(3, "Life areas", theme)
+        _step_heading(4, "Life areas", theme)
         st.caption("Each card is one area of life. Open “Technical basis” only if you want the chart reason.")
         for gtitle, items in group_titles:
             if not items:
@@ -344,8 +403,8 @@ def render_prediction_results(
                 for lp in items:
                     _render_life_block(lp, theme)
 
-    # ---- 4. Focus + timing + cautions ----
-    _step_heading(4, "Right now — focus, timing & watch points", theme)
+    # ---- 5. Focus + timing + cautions ----
+    _step_heading(5, "Right now — focus, timing & watch points", theme)
     st.markdown(f"**Your focus:** {pred['focus_intent']}")
     for fl in pred.get("focus_friendly", pred.get("focus_detail", [])):
         if isinstance(fl, dict):
@@ -371,8 +430,8 @@ def render_prediction_results(
             else:
                 st.warning(c)
 
-    # ---- 5. Deeper signals (collapsed) ----
-    _step_heading(5, "Deeper chart signals (optional)", theme)
+    # ---- 6. Deeper signals (collapsed) ----
+    _step_heading(6, "Deeper chart signals (optional)", theme)
     st.caption("Open these only if you want the underlying yogas, vargas, and combination details.")
 
     with st.expander("Notable yogas", expanded=False):
@@ -402,8 +461,8 @@ def render_prediction_results(
                 f"Ishtakal: {rk['ishtakal']['formatted']} after sunrise."
             )
 
-    # ---- 6. Favourable + remedies + download ----
-    _step_heading(6, "Favourable elements & next steps", theme)
+    # ---- 7. Favourable + remedies + download ----
+    _step_heading(7, "Favourable elements & next steps", theme)
     lk = pred["lucky"]
     st.markdown(
         f"Weekday **{lk['day']}** · Birth star **{lk['nakshatra']}** "

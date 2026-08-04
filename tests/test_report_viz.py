@@ -8,7 +8,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from astro.chart_engine import BirthData, compute_chart
 from astro.prediction import generate_prediction
 from astro.report_viz import (
-    dashboard_metrics, life_area_scores, spiderweb_figure, spiderweb_svg,
+    chart_life_area_scores, dashboard_metrics, life_area_scores,
+    spiderweb_figure, spiderweb_overlay_figure, spiderweb_svg,
 )
 
 
@@ -33,6 +34,11 @@ def test_life_area_scores_and_spiderweb():
     fig = spiderweb_figure(pred, theme="horoscope")
     if fig is not None:
         assert fig.data and fig.data[0].type == "scatterpolar"
+    chart_scores = chart_life_area_scores(compute_chart(BIRTH))
+    assert len(chart_scores) >= 5
+    overlay = spiderweb_overlay_figure(chart_scores, chart_scores)
+    if overlay is not None:
+        assert len(overlay.data) == 2
 
 
 if __name__ == "__main__":

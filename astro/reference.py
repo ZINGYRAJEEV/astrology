@@ -32,6 +32,55 @@ PLANET_SANSKRIT = {
     "Ketu": "Ketu",
 }
 
+# Devanagari names for Hindi-speaking readers.
+PLANET_HINDI = {
+    "Sun": "सूर्य",
+    "Moon": "चंद्रमा",
+    "Mars": "मंगल",
+    "Mercury": "बुध",
+    "Jupiter": "गुरु",
+    "Venus": "शुक्र",
+    "Saturn": "शनि",
+    "Rahu": "राहु",
+    "Ketu": "केतु",
+}
+
+SIGN_HINDI = {
+    "Aries": "मेष", "Taurus": "वृषभ", "Gemini": "मिथुन",
+    "Cancer": "कर्क", "Leo": "सिंह", "Virgo": "कन्या",
+    "Libra": "तुला", "Scorpio": "वृश्चिक", "Sagittarius": "धनु",
+    "Capricorn": "मकर", "Aquarius": "कुंभ", "Pisces": "मीन",
+}
+
+
+def planet_label(name: str) -> str:
+    """English planet name with Hindi (Devanagari) for bilingual reports."""
+    hindi = PLANET_HINDI.get(name)
+    return f"{name} ({hindi})" if hindi else name
+
+
+def sign_label(name: str) -> str:
+    """English sign name with Hindi (Devanagari)."""
+    hindi = SIGN_HINDI.get(name)
+    return f"{name} ({hindi})" if hindi else name
+
+
+def with_hindi_planets(text: str) -> str:
+    """Annotate bare English planet names in prose with Hindi forms.
+
+    Skips names already followed by a parenthesis so labels are not doubled.
+    """
+    import re
+    if not text:
+        return text
+    out = text
+    for eng in sorted(PLANETS, key=len, reverse=True):
+        label = planet_label(eng)
+        if label == eng:
+            continue
+        out = re.sub(rf"\b{eng}\b(?!\s*\()", label, out)
+    return out
+
 PLANET_GLYPH = {
     "Sun": "Su", "Moon": "Mo", "Mars": "Ma", "Mercury": "Me",
     "Jupiter": "Ju", "Venus": "Ve", "Saturn": "Sa", "Rahu": "Ra", "Ketu": "Ke",

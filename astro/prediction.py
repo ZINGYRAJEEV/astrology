@@ -263,6 +263,13 @@ def prediction_markdown(pred: Dict) -> str:
         "",
         pred.get("verdict_legend", fr.VERDICT_LEGEND),
         "",
+        "## Life-area strength map (spiderweb scores)",
+    ]
+    from .report_viz import life_area_scores
+    for row in life_area_scores(pred):
+        lines.append(f"- **{row['area']}**: {row['score']}/100 ({row['verdict']})")
+    lines += [
+        "",
         "## 1. At a glance",
         pred.get("summary", pred.get("opening", "")),
         "",

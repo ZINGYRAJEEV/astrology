@@ -119,6 +119,10 @@ def format_house_section(
         f"{report.lord_house} ({dignity_phrase(report.lord_dignity)}). "
         f"Ashtakavarga: {bindu_context(report.sav_points)} ({report.sav_class})."
     )
+    # 0–100 strength for spiderweb / dashboard visuals.
+    base = {"Supported": 78, "Mixed": 52, "Challenged": 28}.get(verdict, 50)
+    sav_norm = max(0, min(100, (report.sav_points - 15) / 25 * 100))
+    score = int(round(0.40 * base + 0.35 * report.lord_strength + 0.25 * sav_norm))
     return {
         "area": area_name,
         "title": f"{friendly} — {vshort}",
@@ -129,6 +133,9 @@ def format_house_section(
         "technical": technical,
         "prediction": plain,
         "technical_basis": technical,
+        "score": max(5, min(98, score)),
+        "sav_points": report.sav_points,
+        "lord_strength": report.lord_strength,
     }
 
 
@@ -155,6 +162,7 @@ def format_personality_section(
         f"Weekday: {vaara_text} Tithi: {tithi_text} Yoga: {yoga_text} Karana: {karana_text}. "
         f"Lagnesh {lagna_lord} ({dignity_phrase(ll_dignity)}) for {lagna} Ascendant."
     )
+    score = int(round(0.55 * (ll_score * 100) + 0.45 * nav_percent))
     return {
         "area": "Personality & nature",
         "title": f"Who you are — {vshort}",
@@ -165,6 +173,7 @@ def format_personality_section(
         "technical": technical,
         "prediction": plain.strip(),
         "technical_basis": technical,
+        "score": max(5, min(98, score)),
     }
 
 

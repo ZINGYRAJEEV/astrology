@@ -58,6 +58,7 @@ def test_predict_from_birth():
     md = prediction_markdown(pred)
     assert "Life Prediction" in md
     assert "How to read this report" in md
+    assert "Life-area strength map" in md
     assert "1. At a glance" in md
     assert "2. Your story in plain words" in md
     assert "3. Life areas" in md

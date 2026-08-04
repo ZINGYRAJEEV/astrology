@@ -216,6 +216,53 @@ def _render_combinations_reading(pred: dict, theme: str) -> None:
                     st.caption(f"Why: {reason}")
 
 
+def _render_dashboard(pred: dict, theme: str) -> None:
+    """FlowTest-style metric strip + spiderweb before the written reading."""
+    from .report_viz import dashboard_metrics, score_table_rows, spiderweb_figure
+
+    metrics = dashboard_metrics(pred)
+    name = pred.get("name") or "Native"
+
+    if theme == "horoscope":
+        st.markdown(
+            _wrap(
+                theme,
+                f"<div class='subtle' style='letter-spacing:3px;text-transform:uppercase'>"
+                f"Life prediction dashboard &middot; {pred['focus_intent']}</div>"
+                f"<div style='font-family:\"Cormorant Garamond\",serif;font-size:26px;"
+                f"color:#ffe9a8;margin-top:6px'>{name}</div>"
+                f"<div class='subtle' style='margin-top:8px'>Scan the spiderweb for your "
+                f"strongest and weakest life areas, then read the numbered story below.</div>",
+                border="rgba(245,197,66,0.4)",
+            ),
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(f"# \U0001f52e {name}")
+        st.caption("Scan the spiderweb for strongest / weakest areas, then read the story below.")
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Birth quality", f"{metrics['birth_quality']}%", metrics["birth_verdict"])
+    m2.metric("Area strength", f"{metrics['area_avg']}/100", "average across life areas")
+    m3.metric("Supported areas", metrics["supported"], f"{metrics['challenged']} need effort")
+    m4.metric("Positivity balance", f"{metrics['balance']}%",
+              f"{metrics['mixed']} mixed")
+
+    chart_col, table_col = st.columns([1.35, 1])
+    with chart_col:
+        fig = spiderweb_figure(pred, theme=theme)
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    with table_col:
+        st.markdown("**Strength by area**")
+        st.caption("Higher = themes tend to flow more easily.")
+        st.dataframe(
+            score_table_rows(pred),
+            hide_index=True,
+            use_container_width=True,
+            height=360,
+        )
+
+
 def render_prediction_results(
     pred: dict,
     *,
@@ -229,15 +276,19 @@ def render_prediction_results(
     """Render a guided, top-to-bottom prediction report for a layman reader."""
     rk = pred.get("rishikesh", {})
 
+    # ---- Visual dashboard (spiderweb + KPIs) ----
+    if show_header:
+        _render_dashboard(pred, theme)
+
     # ---- Reading roadmap ----
     st.markdown(
         _wrap(
             theme,
             "<b style='color:#ffe9a8'>How to read this report</b>"
             "<div style='margin-top:8px;line-height:1.6'>"
-            "1. Start with the summary &middot; "
+            "1. Scan the spiderweb &amp; metrics &middot; "
             "2. Read the plain-language story &middot; "
-            "3. Scan life areas by verdict &middot; "
+            "3. Open life-area cards by verdict &middot; "
             "4. Check timing &amp; watch points &middot; "
             "5. Open deeper chart signals only if you want the why."
             "</div>"
@@ -246,28 +297,12 @@ def render_prediction_results(
             border="rgba(245,197,66,0.35)",
         ) if theme == "horoscope" else (
             f"**How to read this report**\n\n"
-            f"1. Summary → 2. Plain story → 3. Life areas → 4. Timing → 5. Deeper signals (optional)\n\n"
+            f"1. Spiderweb & metrics → 2. Plain story → 3. Life areas → "
+            f"4. Timing → 5. Deeper signals (optional)\n\n"
             f"{pred.get('scope_note', '')}"
         ),
         unsafe_allow_html=(theme == "horoscope"),
     )
-
-    if show_header:
-        name = pred["name"] or "Native"
-        if theme == "horoscope":
-            st.markdown(
-                _wrap(
-                    theme,
-                    f"<div class='subtle' style='letter-spacing:3px;text-transform:uppercase'>"
-                    f"Life prediction &middot; {pred['focus_intent']}</div>"
-                    f"<div style='font-family:\"Cormorant Garamond\",serif;font-size:22px;"
-                    f"color:#ffe9a8;margin-top:6px'>{name}</div>",
-                    border="rgba(245,197,66,0.35)",
-                ),
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(f"# \U0001f52e {name}")
 
     with st.expander("How to read verdicts (Supported / Mixed / Challenged)", expanded=False):
         st.markdown(pred.get("verdict_legend", ""))

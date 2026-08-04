@@ -4,5 +4,6 @@
 # deploys). The code also runs unchanged on the original pyswisseph.
 pysweph>=2.10.3.6
 streamlit>=1.30
+plotly>=5.18
 pytz>=2023.3
 reportlab>=4.0

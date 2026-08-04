@@ -3,14 +3,15 @@
 Inspired by the FlowTest automation dashboard pattern: metric strip + chart
 first, then the written reading. Scores come from life-area verdicts blended
 with house strength / Ashtakavarga where available.
+
+Plotly is preferred when installed; an SVG spiderweb is used as a fallback so
+Streamlit Cloud never crashes if the package is still installing / unavailable.
 """
 
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
-
-import plotly.graph_objects as go
-
+import math
+from typing import Any, Dict, List, Optional
 
 # Short axis labels that fit a radar chart without crowding.
 _AXIS_LABEL = {
@@ -69,12 +70,25 @@ def dashboard_metrics(pred: Dict) -> Dict:
     }
 
 
+def plotly_available() -> bool:
+    try:
+        import plotly.graph_objects  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 def spiderweb_figure(
     pred: Dict,
     *,
     theme: str = "horoscope",
-) -> go.Figure:
-    """Plotly polar radar chart of life-area strengths."""
+) -> Optional[Any]:
+    """Plotly polar radar chart, or None if plotly is not installed."""
+    try:
+        import plotly.graph_objects as go
+    except ImportError:
+        return None
+
     areas = life_area_scores(pred)
     if not areas:
         fig = go.Figure()
@@ -83,7 +97,6 @@ def spiderweb_figure(
 
     labels = [a["label"] for a in areas]
     scores = [a["score"] for a in areas]
-    # Close the polygon.
     labels_c = labels + [labels[0]]
     scores_c = scores + [scores[0]]
 
@@ -132,6 +145,69 @@ def spiderweb_figure(
         ),
     )
     return fig
+
+
+def spiderweb_svg(pred: Dict, *, theme: str = "horoscope", size: int = 420) -> str:
+    """Pure-SVG spiderweb that works without plotly (Streamlit Cloud safe)."""
+    areas = life_area_scores(pred)
+    dark = theme == "horoscope"
+    line = "#f5c542" if dark else "#e11d48"
+    fill = "rgba(245,197,66,0.30)" if dark else "rgba(225,29,72,0.22)"
+    grid = "rgba(255,255,255,0.18)" if dark else "rgba(36,30,27,0.18)"
+    font = "#e8ebf2" if dark else "#241e1b"
+    cx = cy = size / 2
+    radius = size * 0.34
+    n = max(len(areas), 3)
+
+    def point(i: int, score: float) -> tuple[float, float]:
+        angle = -math.pi / 2 + (2 * math.pi * i / n)
+        r = radius * (score / 100.0)
+        return cx + r * math.cos(angle), cy + r * math.sin(angle)
+
+    rings = []
+    for frac in (0.25, 0.5, 0.75, 1.0):
+        pts = [point(i, frac * 100) for i in range(n)]
+        d = "M " + " L ".join(f"{x:.1f},{y:.1f}" for x, y in pts) + " Z"
+        rings.append(f'<path d="{d}" fill="none" stroke="{grid}" stroke-width="1"/>')
+
+    spokes = []
+    labels_svg = []
+    for i, a in enumerate(areas or [{"label": "—", "score": 0}] * 3):
+        x, y = point(i, 100)
+        spokes.append(
+            f'<line x1="{cx:.1f}" y1="{cy:.1f}" x2="{x:.1f}" y2="{y:.1f}" '
+            f'stroke="{grid}" stroke-width="1"/>'
+        )
+        lx, ly = point(i, 118)
+        labels_svg.append(
+            f'<text x="{lx:.1f}" y="{ly:.1f}" fill="{font}" font-size="13" '
+            f'font-family="Inter,sans-serif" text-anchor="middle" '
+            f'dominant-baseline="middle">{a["label"]}</text>'
+        )
+
+    poly = ""
+    if areas:
+        pts = [point(i, a["score"]) for i, a in enumerate(areas)]
+        d = "M " + " L ".join(f"{x:.1f},{y:.1f}" for x, y in pts) + " Z"
+        dots = "".join(
+            f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{line}"/>' for x, y in pts
+        )
+        poly = (
+            f'<path d="{d}" fill="{fill}" stroke="{line}" stroke-width="2.5"/>'
+            f"{dots}"
+        )
+
+    title = (
+        f'<text x="{cx:.1f}" y="28" fill="{line}" font-size="16" '
+        f'font-family="Georgia,serif" text-anchor="middle" font-weight="700">'
+        f"Life-area strength map</text>"
+    )
+    return (
+        f'<svg viewBox="0 0 {size} {size}" width="100%" '
+        f'style="max-width:{size}px;display:block;margin:0 auto">'
+        f"{title}{''.join(rings)}{''.join(spokes)}{poly}{''.join(labels_svg)}"
+        f"</svg>"
+    )
 
 
 def score_table_rows(pred: Dict) -> List[Dict]:

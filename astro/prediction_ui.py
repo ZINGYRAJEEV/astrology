@@ -218,7 +218,9 @@ def _render_combinations_reading(pred: dict, theme: str) -> None:
 
 def _render_dashboard(pred: dict, theme: str) -> None:
     """FlowTest-style metric strip + spiderweb before the written reading."""
-    from .report_viz import dashboard_metrics, score_table_rows, spiderweb_figure
+    from .report_viz import (
+        dashboard_metrics, score_table_rows, spiderweb_figure, spiderweb_svg,
+    )
 
     metrics = dashboard_metrics(pred)
     name = pred.get("name") or "Native"
@@ -251,7 +253,11 @@ def _render_dashboard(pred: dict, theme: str) -> None:
     chart_col, table_col = st.columns([1.35, 1])
     with chart_col:
         fig = spiderweb_figure(pred, theme=theme)
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        if fig is not None:
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        else:
+            # Fallback when plotly is not installed (e.g. mid-redeploy on Streamlit Cloud).
+            st.markdown(spiderweb_svg(pred, theme=theme), unsafe_allow_html=True)
     with table_col:
         st.markdown("**Strength by area**")
         st.caption("Higher = themes tend to flow more easily.")

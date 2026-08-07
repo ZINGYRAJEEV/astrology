@@ -74,5 +74,10 @@ pg = st.navigation([
         title="Horoscope Matching",
         icon="\U0001f491",
     ),
+    st.Page(
+        "pages/numerology.py",
+        title="Numerology",
+        icon="\U0001f522",
+    ),
 ])
 pg.run()

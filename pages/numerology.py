@@ -195,12 +195,13 @@ def _render_core_cards(chart: dict) -> None:
             )
 
 
-def _render_meanings(chart: dict) -> None:
+def _render_meanings(chart: dict, key_prefix: str = "num") -> None:
     st.markdown("### What your numbers mean")
     for item in chart["core"]:
         m = item["meaning"]
+        # Unique labels avoid duplicate element IDs when comparing both systems.
         with st.expander(
-            f"{item['label']} · {item['number']['display']} — {m['title']}",
+            f"{item['label']} · {item['number']['display']} — {m['title']} ({key_prefix})",
             expanded=(item["key"] == "life_path"),
         ):
             st.markdown(m["plain"])
@@ -271,28 +272,30 @@ def _render_current(chart: dict) -> None:
     )
 
 
-def _render_master_legend() -> None:
-    with st.expander("Master Numbers 11 · 22 · 33 — how to read them"):
+def _render_master_legend(key_prefix: str = "num") -> None:
+    with st.expander(f"Master Numbers 11 · 22 · 33 — how to read them ({key_prefix})"):
         for n in (11, 22, 33):
             m = meaning_for(n)
             st.markdown(f"**{m['title']}** — {m['plain']}")
 
 
-def _render_chart(chart: dict, *, show_download: bool = True) -> None:
+def _render_chart(chart: dict, *, key_prefix: str = "num", show_download: bool = True) -> None:
     _render_core_cards(chart)
     st.write("")
     _render_alignment(chart)
-    _render_meanings(chart)
+    _render_meanings(chart, key_prefix=key_prefix)
     _render_planes(chart)
     _render_current(chart)
-    _render_master_legend()
+    _render_master_legend(key_prefix=key_prefix)
     if show_download:
+        safe = chart["birth_name"].replace(" ", "_") or "chart"
         st.download_button(
-            "Download chart (Markdown)",
+            f"Download {key_prefix} chart (Markdown)",
             chart_markdown(chart),
-            file_name=f"numerology_{chart['birth_name'].replace(' ', '_')}.md",
+            file_name=f"numerology_{safe}_{key_prefix}.md",
             mime="text/markdown",
             use_container_width=True,
+            key=f"num_download_{key_prefix}",
         )
 
 
@@ -305,11 +308,11 @@ if payload["mode"] == "compare":
     )
     t1, t2 = st.tabs(["Pythagorean (Western)", "Chaldean (Vedic)"])
     with t1:
-        _render_chart(payload["pythagorean"])
+        _render_chart(payload["pythagorean"], key_prefix="pythagorean")
     with t2:
-        _render_chart(payload["chaldean"])
+        _render_chart(payload["chaldean"], key_prefix="chaldean")
 else:
-    _render_chart(payload["chart"])
+    _render_chart(payload["chart"], key_prefix=payload["chart"]["system"])
 
 st.caption(
     "Professional practice notes applied: segment-then-sum name protocol, "

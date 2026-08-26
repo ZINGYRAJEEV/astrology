@@ -234,7 +234,7 @@ def render_birth_form(key_prefix: str = "main") -> None:
         except Exception:
             tz_off = geo.tz_offset_hours(place_info.timezone, datetime.now())
         st.caption(
-            f"{place_label} \u00b7 {place_info.timezone} (UTC{tz_off:+.2f})"
+            f"{place_label} \u00b7 {geo.format_tz_label(tz_off, timezone_name=place_info.timezone)}"
         )
     else:
         lat = st.number_input("Latitude", value=30.0869, format="%.4f",
@@ -242,10 +242,11 @@ def render_birth_form(key_prefix: str = "main") -> None:
         lon = st.number_input("Longitude", value=78.2676, format="%.4f",
                               key=f"{key_prefix}_lon")
         tz_off = st.number_input(
-            "UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
-            key=f"{key_prefix}_tz",
+            geo.TZ_INPUT_LABEL, value=geo.IST_OFFSET_HOURS, step=0.25, format="%.2f",
+            key=f"{key_prefix}_tz", help=geo.TZ_INPUT_HELP,
         )
         place_label = f"{lat:.3f},{lon:.3f}"
+        st.caption(geo.format_tz_label(tz_off))
 
     if st.button("Calculate Chart", type="primary", use_container_width=True,
                  key=f"{key_prefix}_calc"):
@@ -349,7 +350,7 @@ st.markdown(
         <div class="page-title">{b.name or 'Native'}</div>
         <div class="subtle" style="margin-top:4px">
           {b.day:02d}/{b.month:02d}/{b.year} &middot; {b.hour:02d}:{b.minute:02d}
-          (UTC{b.tz_offset:+.2f}) &middot; {b.place} &middot;
+          ({geo.format_tz_label(b.tz_offset)}) &middot; {b.place} &middot;
           Lahiri Ayanamsha {chart.ayanamsha:.3f}&deg;
         </div>
       </div>

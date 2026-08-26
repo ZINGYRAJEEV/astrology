@@ -55,7 +55,7 @@ with c3:
     else:
         lat = st.number_input("Latitude", value=30.0869, format="%.4f", key="fc_lat")
         lon = st.number_input("Longitude", value=78.2676, format="%.4f", key="fc_lon")
-        tz_manual = st.number_input("UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
+        tz_manual = st.number_input("Time zone — IST hours from UTC", value=5.5, step=0.25, format="%.2f",
                                     key="fc_tz")
         place, tz_name = f"{lat:.3f},{lon:.3f}", None
 

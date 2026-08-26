@@ -54,7 +54,7 @@ def _location(default_place: str = "Rishikesh, India"):
         return info.latitude, info.longitude, info.name, info.timezone, None
     lat = st.number_input("Latitude", value=30.0869, format="%.4f", key="td_lat")
     lon = st.number_input("Longitude", value=78.2676, format="%.4f", key="td_lon")
-    tz_manual = st.number_input("UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
+    tz_manual = st.number_input("Time zone — IST hours from UTC", value=5.5, step=0.25, format="%.2f",
                                 key="td_tz")
     return lat, lon, f"{lat:.3f},{lon:.3f}", None, tz_manual
 
@@ -90,7 +90,7 @@ if choice == "Enter birth details":
         else:
             blat = st.number_input("Birth latitude", value=30.0869, format="%.4f", key="td_blat")
             blon = st.number_input("Birth longitude", value=78.2676, format="%.4f", key="td_blon")
-            btz_manual = st.number_input("Birth UTC offset (hours)", value=5.5, step=0.25,
+            btz_manual = st.number_input("Birth time zone — IST hours from UTC", value=5.5, step=0.25,
                                          format="%.2f", key="td_btz")
             bplace, btz_name = f"{blat:.3f},{blon:.3f}", None
         if btz_name:

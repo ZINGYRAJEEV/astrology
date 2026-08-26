@@ -58,7 +58,7 @@ if mode == "Pick a city":
 else:
     lat = st.number_input("Latitude", value=30.0869, format="%.4f")
     lon = st.number_input("Longitude", value=78.2676, format="%.4f")
-    tz_manual = st.number_input("UTC offset (hours)", value=5.5, step=0.25, format="%.2f")
+    tz_manual = st.number_input("Time zone — IST hours from UTC", value=5.5, step=0.25, format="%.2f")
     place, tz_name = f"{lat:.3f},{lon:.3f}", None
 
 if st.button("Cast the chart & answer", type="primary", use_container_width=True):

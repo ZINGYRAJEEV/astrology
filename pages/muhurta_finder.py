@@ -49,7 +49,7 @@ def _location():
         return info.latitude, info.longitude, info.name, info.timezone, None
     lat = st.number_input("Latitude", value=30.0869, format="%.4f", key="mh_lat")
     lon = st.number_input("Longitude", value=78.2676, format="%.4f", key="mh_lon")
-    tz_manual = st.number_input("UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
+    tz_manual = st.number_input("Time zone — IST hours from UTC", value=5.5, step=0.25, format="%.2f",
                                 key="mh_tz")
     return lat, lon, f"{lat:.3f},{lon:.3f}", None, tz_manual
 

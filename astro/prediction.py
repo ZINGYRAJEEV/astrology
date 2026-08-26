@@ -27,6 +27,7 @@ from .rishikesh_prediction import analyze_rishikesh_birth
 from . import friendly_report as fr
 from .narrative import build_narrative
 from .nature_profile import build_nature_profile
+from .position_brief import build_position_brief
 from .yogas import detect_yogas
 from .vargas import reading_highlights
 from .combinations import layman_outcomes
@@ -223,6 +224,7 @@ def generate_prediction(
         ],
         "combinations_reading": layman_outcomes(chart),
         "nature_profile": build_nature_profile(chart),
+        "position_brief": build_position_brief(chart),
     }
     # Annotate remaining English planet names with Hindi for bilingual readers.
     for lp in result["life_predictions"]:
@@ -292,8 +294,8 @@ def prediction_markdown(pred: Dict) -> str:
         f"# Life Prediction — {pred['name']}",
         "",
         "## How to read this report",
-        "1. At a glance → 2. Nature & behaviour → 3. Plain story → 4. Life areas → "
-        "5. Timing & watch points → 6. Deeper chart signals (optional) → 7. Favourable elements",
+        "1. At a glance → 2. Clear picture by life area → 3. Nature & behaviour → "
+        "4. Plain story → 5. Detailed cards → 6. Timing → 7. Deeper signals → 8. Next steps",
         "",
         f"> {pred.get('scope_note', fr.SCOPE_NOTE)}",
         "",
@@ -321,9 +323,45 @@ def prediction_markdown(pred: Dict) -> str:
             lines.append(f"- {line}")
         lines.append("")
 
+    brief = pred.get("position_brief")
+    if brief:
+        lines.append("## 2. Clear picture by life area")
+        lines.append(f"### {brief.get('title', 'Lahiri chart interpretation')}")
+        if brief.get("insight"):
+            lines += [brief["insight"], ""]
+        dasha = brief.get("dasha") or {}
+        if dasha.get("title"):
+            lines.append(f"### 🪐 {dasha['title']}")
+            if dasha.get("subtitle"):
+                lines.append(f"_{dasha['subtitle']}_")
+            for b in dasha.get("bullets", []):
+                extra = f": {b['detail']}" if b.get("detail") else ""
+                lines.append(f"- **{b['lead']}**{extra}")
+            lines.append("")
+        if brief.get("key_positions"):
+            lines.append("### Key planetary positions")
+            for p in brief["key_positions"]:
+                lines.append(f"- {p['text']}")
+            lines.append("")
+        for area in brief.get("areas", []):
+            lines.append(f"### {area['name']}")
+            for b in area.get("bullets", []):
+                extra = f" — {b['detail']}" if b.get("detail") else ""
+                lines.append(f"- **{b['lead']}**{extra}")
+            lines.append("")
+        if brief.get("gochara"):
+            lines.append("### Gochara (transit) overlay")
+            for g in brief["gochara"]:
+                lines.append(f"- **{g['line']}**")
+                for eff in g.get("effects", []):
+                    lines.append(f"  - {eff}")
+            lines.append("")
+        if brief.get("summary"):
+            lines += ["### Summary", brief["summary"], ""]
+
     profile = pred.get("nature_profile")
     if profile:
-        lines.append("## 2. Your nature & behaviour")
+        lines.append("## 3. Your nature & behaviour")
         lines += [profile["portrait"], ""]
         if profile.get("traits"):
             lines.append("### Key nature traits")
@@ -344,7 +382,7 @@ def prediction_markdown(pred: Dict) -> str:
 
     narrative = pred.get("narrative")
     if narrative:
-        lines.append("## 3. Your story in plain words")
+        lines.append("## 4. Your story in plain words")
         for heading, text in narrative["overview"]:
             lines += [f"### {heading}", text, ""]
         if narrative.get("deep_dives"):
@@ -361,7 +399,7 @@ def prediction_markdown(pred: Dict) -> str:
         ("What needs effort & attention", groups.get("needs_effort", [])),
     ]
     if any(items for _, items in section_map):
-        lines.append("## 4. Life areas")
+        lines.append("## 5. Life areas (detailed cards)")
         for section_title, items in section_map:
             if not items:
                 continue
@@ -375,7 +413,7 @@ def prediction_markdown(pred: Dict) -> str:
                     "",
                 ]
 
-    lines.append("## 5. Right now — focus, timing & watch points")
+    lines.append("## 6. Right now — focus, timing & watch points")
     lines.append(f"**Your focus:** {pred['focus_intent']}")
     for fl in pred.get("focus_friendly", []):
         if isinstance(fl, dict):
@@ -395,7 +433,7 @@ def prediction_markdown(pred: Dict) -> str:
             lines.append(f"- {c}")
         lines.append("")
 
-    lines.append("## 6. Deeper chart signals (optional)")
+    lines.append("## 7. Deeper chart signals (optional)")
     yogas = pred.get("yogas")
     if yogas:
         lines.append("### Notable yogas")
@@ -430,7 +468,7 @@ def prediction_markdown(pred: Dict) -> str:
 
     lk = pred["lucky"]
     lines += [
-        "## 7. Favourable elements & next steps",
+        "## 8. Favourable elements & next steps",
         f"- Weekday energy: {lk['day']}",
         f"- Birth star: {lk['nakshatra']} (lord {lk['nakshatra_lord']})",
         f"- Gemstone hint: {lk['gemstone_hint']}",

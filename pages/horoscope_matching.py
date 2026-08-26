@@ -49,7 +49,7 @@ def _place_inputs(prefix: str, default_city: str = "Rishikesh, India"):
     lat = st.number_input("Latitude", value=30.0869, format="%.4f", key=f"{prefix}_lat")
     lon = st.number_input("Longitude", value=78.2676, format="%.4f", key=f"{prefix}_lon")
     tz_manual = st.number_input(
-        "UTC offset (hours)", value=5.5, step=0.25, format="%.2f", key=f"{prefix}_tz",
+        "Time zone — IST hours from UTC", value=5.5, step=0.25, format="%.2f", key=f"{prefix}_tz",
     )
     label = f"{lat:.3f},{lon:.3f}"
     return lat, lon, label, None, tz_manual

@@ -54,7 +54,10 @@ with form_col:
             place_info.latitude, place_info.longitude, place_info.name,
         )
         tz_name = place_info.timezone
-        st.caption(f"{place_label} \u00b7 {place_info.timezone}")
+        st.caption(
+            f"{place_label} \u00b7 "
+            f"{geo.format_tz_label(geo.IST_OFFSET_HOURS, timezone_name=tz_name)}"
+        )
     else:
         col_lat, col_lon, col_tz = st.columns(3)
         with col_lat:
@@ -63,8 +66,9 @@ with form_col:
             lon = st.number_input("Longitude", value=78.2676, format="%.4f", key="pred_lon")
         with col_tz:
             tz_off_manual = st.number_input(
-                "UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
+                "Time zone — IST hours from UTC", value=5.5, step=0.25, format="%.2f",
                 key="pred_tz",
+                help="India Standard Time (IST) is 5.5. Change only outside India.",
             )
         place_label = f"{lat:.3f},{lon:.3f}"
         tz_name = None

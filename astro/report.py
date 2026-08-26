@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Dict
 
 from . import reference as ref
+from . import geo
 from .chart_engine import Chart, format_dms
 from .strength_calc import all_strengths
 from .interpret import (
@@ -33,7 +34,7 @@ def build_markdown(chart: Chart, intent: str = "General reading") -> str:
     lines.append("")
     lines.append(
         f"**Birth:** {b.day:02d}/{b.month:02d}/{b.year} at {b.hour:02d}:{b.minute:02d} "
-        f"({'+' if b.tz_offset>=0 else ''}{b.tz_offset} UTC) - {b.place}"
+        f"({geo.format_tz_label(b.tz_offset)}) - {b.place}"
     )
     lines.append(
         f"**Ascendant:** {chart.lagna_sign} ({ref.SIGN_SANSKRIT[chart.lagna_sign]}) "
@@ -163,7 +164,7 @@ def build_pdf(chart: Chart, intent: str = "General reading") -> bytes:
     flow.append(Paragraph(f"Vedic Horoscope Report - {b.name or 'Native'}", h1))
     flow.append(Paragraph(
         f"Birth: {b.day:02d}/{b.month:02d}/{b.year} at {b.hour:02d}:{b.minute:02d} "
-        f"(UTC{'+' if b.tz_offset>=0 else ''}{b.tz_offset}) &mdash; {b.place}", body))
+        f"({geo.format_tz_label(b.tz_offset)}) &mdash; {b.place}", body))
     flow.append(Paragraph(
         f"Ascendant: {chart.lagna_sign} ({ref.SIGN_SANSKRIT[chart.lagna_sign]}) | "
         f"Lahiri Ayanamsha: {chart.ayanamsha:.4f}&deg;", body))

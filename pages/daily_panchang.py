@@ -62,13 +62,14 @@ with st.sidebar:
         tz_off = geo.tz_offset_hours(
             place_info.timezone, datetime.combine(p_date, datetime.now().time()))
         st.caption(
-            f"{place_label} \u00b7 {place_info.timezone} (UTC{tz_off:+.2f})"
+            f"{place_label} \u00b7 {geo.format_tz_label(tz_off, timezone_name=place_info.timezone)}"
         )
     else:
         lat = st.number_input("Latitude", value=30.0869, format="%.4f")
         lon = st.number_input("Longitude", value=78.2676, format="%.4f")
         tz_off = st.number_input(
-            "UTC offset (hours)", value=5.5, step=0.25, format="%.2f",
+            "Time zone — IST hours from UTC", value=5.5, step=0.25, format="%.2f",
+            help="India Standard Time (IST) is 5.5. Change only outside India.",
         )
         place_label = f"{lat:.3f},{lon:.3f}"
         place_name = place_label

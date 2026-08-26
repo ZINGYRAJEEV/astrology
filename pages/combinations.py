@@ -212,7 +212,7 @@ with tab_chart:
             else:
                 blat = st.number_input("Birth latitude", value=30.0869, format="%.4f", key="cm_blat")
                 blon = st.number_input("Birth longitude", value=78.2676, format="%.4f", key="cm_blon")
-                btz_manual = st.number_input("Birth UTC offset (hours)", value=5.5, step=0.25,
+                btz_manual = st.number_input("Birth time zone — IST hours from UTC", value=5.5, step=0.25,
                                              format="%.2f", key="cm_btz")
                 bplace, btz_name = f"{blat:.3f},{blon:.3f}", None
             if btz_name:

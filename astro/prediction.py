@@ -28,6 +28,8 @@ from . import friendly_report as fr
 from .narrative import build_narrative
 from .nature_profile import build_nature_profile
 from .position_brief import build_position_brief
+from .timing_summary import build_timing_summary, timing_summary_markdown
+from .chart_explain import build_chart_explain, chart_explain_markdown
 from .yogas import detect_yogas
 from .vargas import reading_highlights
 from .combinations import layman_outcomes
@@ -225,7 +227,14 @@ def generate_prediction(
         "combinations_reading": layman_outcomes(chart),
         "nature_profile": build_nature_profile(chart),
         "position_brief": build_position_brief(chart),
+        "timing_summary": build_timing_summary(chart, horizon_years=float(horizon_years)),
     }
+    result["chart_explain"] = build_chart_explain(
+        chart,
+        horizon_years=float(horizon_years),
+        timing=result["timing_summary"],
+        remedies_count=len(remedies),
+    )
     # Annotate remaining English planet names with Hindi for bilingual readers.
     for lp in result["life_predictions"]:
         for key in ("plain", "technical", "prediction", "technical_basis", "title"):
@@ -426,6 +435,12 @@ def prediction_markdown(pred: Dict) -> str:
 
     tf = pred.get("timing_friendly", fr.format_timing_plain(pred.get("timing", {})))
     lines += ["### What's happening now", tf["plain"], "", f"> {tf['technical']}", ""]
+
+    if pred.get("timing_summary"):
+        lines.append(timing_summary_markdown(pred["timing_summary"]))
+
+    if pred.get("chart_explain"):
+        lines.append(chart_explain_markdown(pred["chart_explain"]))
 
     if pred.get("cautions"):
         lines.append("### Watch points")

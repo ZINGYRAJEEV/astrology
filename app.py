@@ -40,6 +40,11 @@ pg = st.navigation([
         icon="\U0001fa90",
     ),
     st.Page(
+        "pages/timing_summary.py",
+        title="Timing Summary",
+        icon="\U0001f4c8",
+    ),
+    st.Page(
         "pages/yoga_detector.py",
         title="Yoga Detector",
         icon="\U0001f9ff",

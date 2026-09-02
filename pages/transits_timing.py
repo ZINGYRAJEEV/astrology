@@ -14,6 +14,8 @@ from astro.dasha_calc import (
     compute_vimshottari, current_dasha_full, upcoming_changes,
 )
 from astro.narrative import DASHA_THEME
+from astro.timing_summary import build_timing_summary
+from astro.timing_viz import render_timing_viz
 
 st.set_page_config(page_title="Transits & Timing", page_icon="\U0001fa90", layout="wide")
 
@@ -164,6 +166,13 @@ if prat:
         f"<div style='margin-top:4px'>Immediate flavour right now: {_theme(prat.lord)}.</div></div>",
         unsafe_allow_html=True,
     )
+
+st.markdown("### Visual timing map (impact by life area)")
+st.caption(
+    "Antardasha bars + good/mixed/challenged impact lines. "
+    "Open **Timing Summary** in the sidebar for a dedicated full-screen view."
+)
+render_timing_viz(build_timing_summary(chart, when=when, horizon_years=6), height=780)
 
 st.markdown("### Upcoming period changes")
 changes = upcoming_changes(periods, when, count=8)

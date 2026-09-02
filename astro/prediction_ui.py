@@ -392,14 +392,16 @@ def render_prediction_results(
             "1. Spiderweb &amp; metrics &middot; "
             "2. Clear picture by life area (Career / Wealth / Family / Health) &middot; "
             "3. Nature &amp; behaviour &middot; "
-            "4. Deeper story &amp; optional technical detail."
+            "4. Timing map (graph) &middot; "
+            "5. Deeper story &amp; optional technical detail."
             "</div>"
             f"<div style='margin-top:10px;font-size:13px;color:#9aa3b8'>"
             f"{pred.get('scope_note', '')}</div>",
             border="rgba(245,197,66,0.35)",
         ) if theme == "horoscope" else (
             f"**How to read this report**\n\n"
-            f"1. Spiderweb → 2. Clear life-area bullets → 3. Nature → 4. Deeper detail\n\n"
+            f"1. Spiderweb → 2. Clear life-area bullets → 3. Nature → "
+            f"4. Timing map (graph) → 5. Deeper detail\n\n"
             f"{pred.get('scope_note', '')}"
         ),
         unsafe_allow_html=(theme == "horoscope"),
@@ -427,6 +429,14 @@ def render_prediction_results(
         st.markdown("**Birth snapshot**")
         for line in birth_intro:
             st.markdown(f"- {line}")
+
+    # Structured one-page style summary (identity, verdicts, working vs effort).
+    if pred.get("chart_explain"):
+        with st.expander("Clean structured summary (scan this first)", expanded=False):
+            from .explain_ui import render_chart_explain
+            render_chart_explain(
+                pred["chart_explain"], theme=theme, show_summary=True, show_timing=False,
+            )
 
     # ---- 2. Clear planetary brief (Career / Wealth / Family / Health) ----
     if pred.get("position_brief"):
@@ -481,6 +491,39 @@ def render_prediction_results(
     if tf.get("technical"):
         with st.expander("Timing technical basis", expanded=False):
             st.caption(tf["technical"])
+
+    # Visual timing map (D3) — graph-first, short notes on hover / year cards.
+    if pred.get("timing_summary"):
+        st.markdown("**Timing map — impact by Antardasha**")
+        st.caption(
+            "Scan the timeline and impact lines first (green = favourable, amber = mixed, "
+            "red = challenged). Open a year card for short watch / lean-into notes."
+        )
+        from .timing_viz import render_timing_viz
+        render_timing_viz(pred["timing_summary"], height=820)
+        if pred.get("chart_explain"):
+            st.markdown("**Why these periods behave this way**")
+            st.caption(
+                "Open the current chapter for phase-by-phase Career / Wealth / Family "
+                "detail and the Mahadasha → Antardasha → transit explanation."
+            )
+            from .explain_ui import render_chart_explain
+            render_chart_explain(
+                pred["chart_explain"], theme=theme, show_summary=False, show_timing=True,
+            )
+        with st.expander("Antardasha score table (optional)", expanded=False):
+            rows = []
+            for ch in pred["timing_summary"].get("chapters", []):
+                row = {
+                    "Period": ch["label"],
+                    "From": ch["start_label"],
+                    "To": ch["end_label"],
+                }
+                for area, sc in ch["scores"].items():
+                    row[area] = f"{sc['score']} ({sc['label']})"
+                rows.append(row)
+            if rows:
+                st.dataframe(rows, hide_index=True, use_container_width=True)
 
     if pred.get("cautions"):
         st.markdown("**Watch points**")

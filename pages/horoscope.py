@@ -399,6 +399,11 @@ tab_pred, tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # YOUR REPORT - guided full prediction (primary reading path)
 # ===========================================================================
 with tab_pred:
+    st.info(
+        "**Timing Summary** is in the left sidebar (2nd item) — open it for the "
+        "Antardasha timeline graph, impact lines, and phase-by-phase explanation. "
+        "The same graphs also appear below in section 6 of this report."
+    )
     pred = generate_prediction(chart, intent)
     render_prediction_results(
         pred,

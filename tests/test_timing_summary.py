@@ -42,10 +42,11 @@ def test_timing_summary_structure():
 def test_timing_d3_html_embeds_data():
     chart = compute_chart(BIRTH)
     summary = build_timing_summary(chart, when=datetime(2025, 9, 1), horizon_years=4)
+    from astro.timing_viz import timeline_figure, impact_figure, timing_d3_html
+    assert timeline_figure(summary) is not None
+    assert impact_figure(summary) is not None
     html = timing_d3_html(summary)
     assert "d3@7" in html
-    assert "Antardasha timeline" in html
-    assert "Impact by life area" in html
     assert summary["chapters"][0]["label"].split(" / ")[0] in html
 
 

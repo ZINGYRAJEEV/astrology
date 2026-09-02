@@ -10,6 +10,11 @@ pg = st.navigation([
         default=True,
     ),
     st.Page(
+        "pages/timing_summary.py",
+        title="Timing Summary",
+        icon="\U0001f4c8",
+    ),
+    st.Page(
         "pages/today_dashboard.py",
         title="Today for You",
         icon="\U0001f31e",
@@ -38,11 +43,6 @@ pg = st.navigation([
         "pages/transits_timing.py",
         title="Transits & Timing",
         icon="\U0001fa90",
-    ),
-    st.Page(
-        "pages/timing_summary.py",
-        title="Timing Summary",
-        icon="\U0001f4c8",
     ),
     st.Page(
         "pages/yoga_detector.py",

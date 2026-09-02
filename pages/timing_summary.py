@@ -1,4 +1,4 @@
-"""Timing Summary — visual Mahadasha / Antardasha impact map (D3)."""
+"""Timing Summary — visual Mahadasha / Antardasha impact map."""
 
 from __future__ import annotations
 
@@ -37,7 +37,9 @@ st.caption(
 st.markdown("### Whose chart?")
 saved = persistence.list_charts()
 options = ["Enter birth details"] + [f"{c['name']} — {c['summary']}" for c in saved]
-choice = st.selectbox("Chart", options, key="ts_choice")
+# Prefer a saved chart when available so the map appears with one click.
+default_idx = 1 if len(options) > 1 else 0
+choice = st.selectbox("Chart", options, index=default_idx, key="ts_choice")
 
 birth = None
 if choice == "Enter birth details":
@@ -94,13 +96,15 @@ with c1:
 with c2:
     horizon = st.slider("Years ahead", min_value=3, max_value=12, value=6, key="ts_horizon")
 
-if st.button("Build timing map", type="primary", use_container_width=True):
+run = st.button("Build timing map", type="primary", use_container_width=True)
+# Auto-build once a chart is chosen (saved charts or filled birth form).
+if run or birth is not None:
     st.session_state["ts_birth"] = birth
     st.session_state["ts_asof"] = as_of
     st.session_state["ts_horizon"] = horizon
 
-if "ts_birth" not in st.session_state:
-    st.info("Pick a chart, then click **Build timing map**.")
+if "ts_birth" not in st.session_state or st.session_state["ts_birth"] is None:
+    st.info("Pick a saved chart (or enter birth details), then the map builds automatically.")
     st.stop()
 
 chart = compute_chart(st.session_state["ts_birth"])
@@ -123,6 +127,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+st.markdown("### Graphs")
 render_timing_viz(summary, height=860)
 
 explain = build_chart_explain(

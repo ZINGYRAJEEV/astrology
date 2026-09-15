@@ -405,6 +405,18 @@ with tab_pred:
         "The same graphs also appear below in section 6 of this report."
     )
     pred = generate_prediction(chart, intent)
+    from astro.notify import notify_scan_complete, prediction_alert_snippet
+    _b = chart.birth
+    _once = f"pred:{_b.name}:{_b.year}-{_b.month}-{_b.day}-{_b.hour}:{_b.minute}:{intent}"
+    _ok, _ = notify_scan_complete(
+        "prediction",
+        pred.get("name") or _b.name or "Native",
+        prediction_alert_snippet(pred),
+        "Open Horoscope & Reading → Your Report for the full guided reading.",
+        once_key=_once,
+    )
+    if _ok:
+        st.toast("Telegram alert sent", icon="📱")
     render_prediction_results(
         pred,
         theme="horoscope",

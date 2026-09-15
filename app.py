@@ -15,6 +15,11 @@ pg = st.navigation([
         icon="\U0001f4c8",
     ),
     st.Page(
+        "pages/telegram_alerts.py",
+        title="Telegram Alerts",
+        icon="\U0001f4f1",
+    ),
+    st.Page(
         "pages/today_dashboard.py",
         title="Today for You",
         icon="\U0001f31e",

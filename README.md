@@ -62,6 +62,19 @@ Then enter birth **date, time and place** in the sidebar and click
 **Calculate Chart**. Birth-time accuracy is mission-critical for the
 Ascendant.
 
+### Telegram alerts (optional)
+
+Get a short Telegram message when a Timing scan or reading finishes.
+
+1. Create a bot with [@BotFather](https://t.me/BotFather) (`/newbot`) and copy the token.
+2. Start a chat with your bot, then get your numeric **chat ID** (e.g. via `@userinfobot`).
+3. Copy `.streamlit/secrets.toml.example` → `.streamlit/secrets.toml` and fill in values  
+   (or paste the same block into Streamlit Cloud → **Settings → Secrets**).
+4. Open **Telegram Alerts** in the sidebar, enable alerts, click **Send test alert**.
+5. Run **Timing Summary** or **Horoscope & Reading** — you’ll get one alert per scan per session.
+
+If Telegram is not configured, the app works as before (silent no-op).
+
 ## Test
 
 ```bash

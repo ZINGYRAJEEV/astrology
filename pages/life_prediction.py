@@ -106,6 +106,17 @@ if submitted:
     chart = compute_chart(birth)
     pred = generate_prediction(chart, intent)
     st.session_state["prediction"] = pred
+    from astro.notify import notify_scan_complete, prediction_alert_snippet
+    _once = f"life:{birth.name}:{birth.year}-{birth.month}-{birth.day}:{intent}"
+    _ok, _ = notify_scan_complete(
+        "life_prediction",
+        pred.get("name") or birth.name or "Native",
+        prediction_alert_snippet(pred),
+        "Open Life Prediction in Jyotish Darshan for the full report.",
+        once_key=_once,
+    )
+    if _ok:
+        st.toast("Telegram alert sent", icon="📱")
 
 if "prediction" not in st.session_state:
     st.info("Fill in your birth details above and click **Generate Prediction**.")

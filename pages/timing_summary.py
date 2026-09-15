@@ -13,6 +13,8 @@ from astro.timing_summary import build_timing_summary, timing_summary_markdown
 from astro.timing_viz import render_timing_viz
 from astro.chart_explain import build_chart_explain, chart_explain_markdown
 from astro.explain_ui import render_chart_explain
+from astro.notify import notify_scan_complete, timing_alert_snippet
+from astro.notify_ui import render_telegram_settings
 
 st.set_page_config(page_title="Timing Summary", page_icon="\U0001f4c8", layout="wide")
 
@@ -33,6 +35,8 @@ st.caption(
     "Graph-first Vimshottari map — Antardasha timeline + impact lines for "
     "Career / Wealth / Family / Health / Spiritual. Green favourable · amber mixed · red challenged."
 )
+
+render_telegram_settings(expanded=False, key_prefix="tg_timing")
 
 st.markdown("### Whose chart?")
 saved = persistence.list_charts()
@@ -112,6 +116,22 @@ when = datetime.combine(st.session_state["ts_asof"], time(12, 0))
 summary = build_timing_summary(
     chart, when=when, horizon_years=float(st.session_state["ts_horizon"]),
 )
+
+# Telegram alert once per chart/as-of/horizon in this browser session.
+_b = st.session_state["ts_birth"]
+_once = (
+    f"timing:{getattr(_b, 'name', '')}:{_b.year}-{_b.month}-{_b.day}:"
+    f"{st.session_state['ts_asof']}:{st.session_state['ts_horizon']}"
+)
+_ok, _detail = notify_scan_complete(
+    "timing",
+    getattr(_b, "name", None) or "Native",
+    timing_alert_snippet(summary),
+    "Open Timing Summary in Jyotish Darshan for graphs & phase detail.",
+    once_key=_once,
+)
+if _ok:
+    st.toast("Telegram alert sent", icon="📱")
 
 cur = summary["current"]
 st.markdown(

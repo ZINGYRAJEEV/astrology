@@ -41,6 +41,19 @@ QUESTION_TYPES: Dict[str, Dict] = {
     "travel": {"label": "Travel / relocation / foreign", "primary": 12, "support": [3, 9], "mode": "standard"},
     "health": {"label": "Health / recovery", "primary": 1, "mode": "health"},
     "litigation": {"label": "Dispute / litigation / competition", "primary": 1, "mode": "litigation"},
+    # Mundane / tech (Lahiri) — Mercury · Rahu · Saturn + 3rd/11th/10th/6th
+    "ai_future": {
+        "label": "AI / technology — future themes",
+        "primary": 11, "support": [3, 10], "mode": "tech",
+    },
+    "ai_career": {
+        "label": "AI career / product / launch",
+        "primary": 10, "support": [11, 3], "mode": "tech",
+    },
+    "ai_risk": {
+        "label": "AI risk / disruption / regulation",
+        "primary": 6, "support": [8, 12], "mode": "tech",
+    },
 }
 
 
@@ -158,6 +171,58 @@ def answer_prashna(
         significators = [lagna_lord, "Moon", sixth_lord]
         key_pair = (lagna_lord, sixth_lord)
         inverted = True  # a connection to the 6th (disease/opponent) is adverse
+    elif mode == "tech":
+        # Mundane AI/tech: gains/networks (11), effort/media (3), career (10),
+        # with Mercury (intellect/code), Rahu (disruption/foreign tech), Saturn (rules).
+        ph_score, ph_reasons = _house_quality(chart, strengths, primary)
+        reasons += ph_reasons
+        support_score = 0.0
+        for h in cfg.get("support", []):
+            s, _ = _house_quality(chart, strengths, h)
+            support_score += 0.45 * s
+        merc = strengths["Mercury"]
+        rahu = strengths["Rahu"]
+        sat = strengths["Saturn"]
+        merc_d = _DIGNITY_VAL.get(merc.dignity, 0.0)
+        rahu_h = chart.planets["Rahu"].house
+        sat_h = chart.planets["Saturn"].house
+        tech_boost = 0.55 * merc_d
+        reasons.append(
+            f"Mercury (intellect / systems) is {merc.dignity.lower()} in "
+            f"house {chart.planets['Mercury'].house}"
+        )
+        if rahu_h in (3, 10, 11):
+            tech_boost += 0.55
+            reasons.append(
+                f"Rahu in {rahu_h}th — sudden tech, networks, foreign systems amplify the theme"
+            )
+        elif rahu_h in _DUSTHANA:
+            tech_boost -= 0.25
+            reasons.append(f"Rahu in {rahu_h}th — disruption with more volatility / opacity")
+        else:
+            reasons.append(f"Rahu in {rahu_h}th colours unconventional growth")
+        if sat_h in (6, 10, 11) or sat.dignity in ("Own Sign", "Exalted", "Moolatrikona"):
+            tech_boost += 0.35
+            reasons.append(
+                f"Saturn ({sat.dignity}) in {sat_h}th — structure, regulation, and durable systems"
+            )
+        elif sat_h in _DUSTHANA and question_type != "ai_risk":
+            tech_boost -= 0.2
+            reasons.append(f"Saturn in {sat_h}th — delays, compliance friction, slower maturity")
+        if question_type == "ai_risk":
+            # For risk questions, a strong 6th / hard Saturn–Rahu can mean "risk is real".
+            # Keep house scoring as-is; clarify in reasons.
+            reasons.append(
+                "Risk lens: a stronger 6th/8th/12th points to disruption, legal, or hidden costs"
+            )
+        raw = (
+            ph_score + 0.5 * support_score + 0.45 * moon_score
+            + 0.35 * lagna_score + tech_boost
+        )
+        matter_lord = chart.house_lord(primary)
+        significators = [lagna_lord, matter_lord, "Moon", "Mercury", "Rahu", "Saturn"]
+        key_pair = (lagna_lord, matter_lord) if matter_lord != lagna_lord else ("Mercury", "Rahu")
+        inverted = False
     else:
         ph_score, ph_reasons = _house_quality(chart, strengths, primary)
         reasons += ph_reasons

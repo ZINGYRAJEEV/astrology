@@ -27,7 +27,8 @@ st.markdown(
 st.markdown("# \U0001f52e Prashna — Horary Astrology")
 st.caption(
     "Ask a question and get an answer from the chart of this very moment — "
-    "no birth details needed · Lahiri sidereal"
+    "no birth details needed · Lahiri sidereal. "
+    "Includes AI / technology themes (Mercury · Rahu · Saturn) — or open **AI & Tech Themes**."
 )
 
 st.markdown("### Your question")

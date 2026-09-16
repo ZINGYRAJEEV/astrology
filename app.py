@@ -70,6 +70,11 @@ pg = st.navigation([
         icon="\U0001f52e",
     ),
     st.Page(
+        "pages/ai_future.py",
+        title="AI & Tech Themes",
+        icon="\U0001f916",
+    ),
+    st.Page(
         "pages/sahams.py",
         title="Sahams",
         icon="\U0001f3af",

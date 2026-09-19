@@ -37,41 +37,11 @@ form_col, _ = st.columns([2, 1])
 with form_col:
   with st.container(border=True):
     st.markdown("### Birth Data")
-    place_mode = st.radio(
-        "Location", ["Pick a city", "Manual lat/long"], horizontal=True,
-        key="pred_place_mode",
+    from astro.location_ui import render_location_picker
+    lat, lon, place_label, tz_name, tz_manual = render_location_picker(
+        "pred",
+        place_label="Birth place",
     )
-    if place_mode == "Pick a city":
-        city = st.selectbox(
-            "Birth place",
-            geo.PLACE_NAMES,
-            index=geo.PLACE_NAMES.index("Rishikesh, India")
-            if "Rishikesh, India" in geo.PLACE_NAMES else 0,
-            key="pred_city",
-        )
-        place_info = geo.resolve_place(city)
-        lat, lon, place_label = (
-            place_info.latitude, place_info.longitude, place_info.name,
-        )
-        tz_name = place_info.timezone
-        st.caption(
-            f"{place_label} \u00b7 "
-            f"{geo.format_tz_label(geo.IST_OFFSET_HOURS, timezone_name=tz_name)}"
-        )
-    else:
-        col_lat, col_lon, col_tz = st.columns(3)
-        with col_lat:
-            lat = st.number_input("Latitude", value=30.0869, format="%.4f", key="pred_lat")
-        with col_lon:
-            lon = st.number_input("Longitude", value=78.2676, format="%.4f", key="pred_lon")
-        with col_tz:
-            tz_off_manual = st.number_input(
-                "Time zone — IST hours from UTC", value=5.5, step=0.25, format="%.2f",
-                key="pred_tz",
-                help="India Standard Time (IST) is 5.5. Change only outside India.",
-            )
-        place_label = f"{lat:.3f},{lon:.3f}"
-        tz_name = None
 
     with st.form("prediction_form"):
         c1, c2 = st.columns(2)
@@ -96,7 +66,7 @@ if submitted:
         tz_off = geo.tz_offset_hours(
             tz_name, datetime.combine(b_date, b_time))
     else:
-        tz_off = tz_off_manual
+        tz_off = tz_manual if tz_manual is not None else 5.5
     birth = BirthData(
         name=name, year=b_date.year, month=b_date.month, day=b_date.day,
         hour=b_time.hour, minute=b_time.minute,

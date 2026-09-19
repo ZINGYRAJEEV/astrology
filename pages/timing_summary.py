@@ -57,27 +57,13 @@ if choice == "Enter birth details":
             )
         with c2:
             b_time = st.time_input("Time of birth", value=time(12, 0), step=60, key="ts_btime")
-        b_mode = st.radio(
-            "Birth location", ["Pick a city", "Manual lat/long"],
-            horizontal=True, key="ts_bplace_mode",
+        from astro.location_ui import render_location_picker
+        blat, blon, bplace, btz_name, btz_manual = render_location_picker(
+            "ts",
+            place_label="Birth place",
+            mode_label="Birth location",
+            at_dt=datetime.combine(b_date, b_time),
         )
-        if b_mode == "Pick a city":
-            idx = (
-                geo.PLACE_NAMES.index("Rishikesh, India")
-                if "Rishikesh, India" in geo.PLACE_NAMES else 0
-            )
-            bcity = st.selectbox("Birth place", geo.PLACE_NAMES, index=idx, key="ts_bcity")
-            binfo = geo.resolve_place(bcity)
-            blat, blon, bplace, btz_name, btz_manual = (
-                binfo.latitude, binfo.longitude, binfo.name, binfo.timezone, None)
-        else:
-            blat = st.number_input("Birth latitude", value=30.0869, format="%.4f", key="ts_blat")
-            blon = st.number_input("Birth longitude", value=78.2676, format="%.4f", key="ts_blon")
-            btz_manual = st.number_input(
-                "Birth time zone — IST hours from UTC", value=5.5, step=0.25,
-                format="%.2f", key="ts_btz",
-            )
-            bplace, btz_name = f"{blat:.3f},{blon:.3f}", None
         if btz_name:
             btz = geo.tz_offset_hours(btz_name, datetime.combine(b_date, b_time))
         else:

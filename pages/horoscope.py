@@ -212,41 +212,19 @@ def render_birth_form(key_prefix: str = "main") -> None:
         )
     st.caption("Birth time accuracy is mission-critical for the Ascendant.")
 
-    place_mode = st.radio(
-        "Location", ["Pick a city", "Manual lat/long"], horizontal=True,
-        key=f"{key_prefix}_place_mode",
+    from astro.location_ui import render_location_picker
+    lat, lon, place_label, tz_name, tz_manual = render_location_picker(
+        key_prefix,
+        place_label="Birth place",
+        at_dt=datetime.combine(b_date, b_time),
     )
-    if place_mode == "Pick a city":
-        city = st.selectbox(
-            "Birth place",
-            geo.PLACE_NAMES,
-            index=geo.PLACE_NAMES.index("Rishikesh, India")
-            if "Rishikesh, India" in geo.PLACE_NAMES else 0,
-            key=f"{key_prefix}_city",
-        )
-        place_info = geo.resolve_place(city)
-        lat, lon, place_label = (
-            place_info.latitude, place_info.longitude, place_info.name,
-        )
+    if tz_name:
         try:
-            tz_off = geo.tz_offset_hours(
-                place_info.timezone, datetime.combine(b_date, b_time))
+            tz_off = geo.tz_offset_hours(tz_name, datetime.combine(b_date, b_time))
         except Exception:
-            tz_off = geo.tz_offset_hours(place_info.timezone, datetime.now())
-        st.caption(
-            f"{place_label} \u00b7 {geo.format_tz_label(tz_off, timezone_name=place_info.timezone)}"
-        )
+            tz_off = geo.tz_offset_hours(tz_name, datetime.now())
     else:
-        lat = st.number_input("Latitude", value=30.0869, format="%.4f",
-                              key=f"{key_prefix}_lat")
-        lon = st.number_input("Longitude", value=78.2676, format="%.4f",
-                              key=f"{key_prefix}_lon")
-        tz_off = st.number_input(
-            geo.TZ_INPUT_LABEL, value=geo.IST_OFFSET_HOURS, step=0.25, format="%.2f",
-            key=f"{key_prefix}_tz", help=geo.TZ_INPUT_HELP,
-        )
-        place_label = f"{lat:.3f},{lon:.3f}"
-        st.caption(geo.format_tz_label(tz_off))
+        tz_off = tz_manual if tz_manual is not None else geo.IST_OFFSET_HOURS
 
     if st.button("Calculate Chart", type="primary", use_container_width=True,
                  key=f"{key_prefix}_calc"):

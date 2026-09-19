@@ -37,22 +37,12 @@ st.caption(
 
 
 def _place_inputs(prefix: str, default_city: str = "Rishikesh, India"):
-    place_mode = st.radio(
-        "Location", ["Pick a city", "Manual lat/long"], horizontal=True,
-        key=f"{prefix}_place_mode",
+    from astro.location_ui import render_location_picker
+    return render_location_picker(
+        prefix,
+        place_label="Birth place",
+        default_city=default_city,
     )
-    if place_mode == "Pick a city":
-        idx = geo.PLACE_NAMES.index(default_city) if default_city in geo.PLACE_NAMES else 0
-        city = st.selectbox("Birth place", geo.PLACE_NAMES, index=idx, key=f"{prefix}_city")
-        info = geo.resolve_place(city)
-        return info.latitude, info.longitude, info.name, info.timezone, None
-    lat = st.number_input("Latitude", value=30.0869, format="%.4f", key=f"{prefix}_lat")
-    lon = st.number_input("Longitude", value=78.2676, format="%.4f", key=f"{prefix}_lon")
-    tz_manual = st.number_input(
-        "Time zone — IST hours from UTC", value=5.5, step=0.25, format="%.2f", key=f"{prefix}_tz",
-    )
-    label = f"{lat:.3f},{lon:.3f}"
-    return lat, lon, label, None, tz_manual
 
 
 def _birth_panel(title: str, prefix: str):

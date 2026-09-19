@@ -104,3 +104,44 @@ def format_place_tz_caption(place_label: str, timezone_name: str, offset_hours: 
 
 def lookup(city: str) -> Optional[tuple]:
     return CITIES.get(city)
+
+
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance in kilometres."""
+    from math import asin, cos, radians, sin, sqrt
+    r = 6371.0
+    p1, p2 = radians(lat1), radians(lat2)
+    dphi = radians(lat2 - lat1)
+    dlmb = radians(lon2 - lon1)
+    a = sin(dphi / 2) ** 2 + cos(p1) * cos(p2) * sin(dlmb / 2) ** 2
+    return 2 * r * asin(sqrt(a))
+
+
+def nearest_city(latitude: float, longitude: float) -> PlaceInfo:
+    """Closest curated city to a GPS point (for label + IANA timezone)."""
+    best_name = PLACE_NAMES[0]
+    best_dist = float("inf")
+    for name, (lat, lon, _tz) in CITIES.items():
+        d = _haversine_km(latitude, longitude, lat, lon)
+        if d < best_dist:
+            best_dist = d
+            best_name = name
+    return resolve_place(best_name)
+
+
+def place_from_coordinates(
+    latitude: float,
+    longitude: float,
+    *,
+    label: Optional[str] = None,
+) -> PlaceInfo:
+    """Build a PlaceInfo from GPS coords using the nearest city timezone."""
+    near = nearest_city(latitude, longitude)
+    name = label or f"Near {near.name} ({latitude:.3f}, {longitude:.3f})"
+    return PlaceInfo(
+        name=name,
+        latitude=latitude,
+        longitude=longitude,
+        timezone=near.timezone,
+    )
+

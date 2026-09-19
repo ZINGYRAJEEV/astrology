@@ -357,30 +357,63 @@ varga_key = "D9" if varga.startswith("D9") else "D1"
 st.markdown(
     """
     <div class="card" style="border-color:rgba(245,197,66,0.28);margin-top:4px">
-      <b style="color:#ffe9a8">Where to start</b>
-      <div class="subtle" style="margin-top:6px;line-height:1.55">
-        Begin on <b>Your Report</b> — a guided, numbered reading in plain words.
-        Use <b>Focus reading</b> for a short intent-only view.
-        Open Chart / Evaluation / Synthesis only when you want the technical detail.
+      <b style="color:#ffe9a8">How to read this page</b>
+      <div class="subtle" style="margin-top:8px;line-height:1.65">
+        Follow the tabs left → right. Start with <b>Your Report</b> (plain-language full reading).
+        Use <b>Focus reading</b> for a short answer on your chosen topic.
+        Open <b>Chart / Evaluation / Synthesis</b> only when you want technical detail.
+        Use <b>Timing &amp; Transits</b> for dasha periods, then <b>Witness</b> for a reflective close.
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+        <span class="pill">1 Your Report</span>
+        <span class="pill">2 Focus</span>
+        <span class="pill">3 Chart</span>
+        <span class="pill">4 Evaluation</span>
+        <span class="pill">5 Remedies</span>
+        <span class="pill">6 Timing</span>
+        <span class="pill">7 Witness</span>
       </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
+
+def _tab_banner(step: str, title: str, purpose: str) -> None:
+    """One-line purpose card so each tab is self-explanatory."""
+    st.markdown(
+        f"""
+        <div class="card" style="border-color:rgba(245,197,66,0.22);margin-bottom:12px">
+          <div class="subtle" style="letter-spacing:2px;text-transform:uppercase">{step}</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:#ffe9a8;margin-top:4px">
+            {title}
+          </div>
+          <div class="subtle" style="margin-top:6px;line-height:1.5">{purpose}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 tab_pred, tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "\U0001f52e Your Report", "\U0001f4d6 Focus reading", "Chart",
-    "Evaluation", "Synthesis & remedies", "Timing & Transits", "\U0001fab7 Witness",
+    "1 \U0001f52e Your Report",
+    "2 \U0001f4d6 Focus reading",
+    "3 Chart",
+    "4 Evaluation",
+    "5 Synthesis & remedies",
+    "6 Timing & Transits",
+    "7 \U0001fab7 Witness",
 ])
 
 # ===========================================================================
-# YOUR REPORT - guided full prediction (primary reading path)
+# 1. YOUR REPORT - guided full prediction (primary reading path)
 # ===========================================================================
 with tab_pred:
-    st.info(
-        "**Timing Summary** is in the left sidebar (2nd item) — open it for the "
-        "Antardasha timeline graph, impact lines, and phase-by-phase explanation. "
-        "The same graphs also appear below in section 6 of this report."
+    _tab_banner(
+        "Tab 1 · Start here",
+        "Your Report",
+        "Guided, numbered reading in plain words — spiderweb, life areas, nature, "
+        "timing map, and download. Best first stop for most readers.",
     )
     pred = generate_prediction(chart, intent)
     from astro.notify import notify_scan_complete, prediction_alert_snippet
@@ -400,15 +433,22 @@ with tab_pred:
         theme="horoscope",
         download_label="Download full prediction (Markdown)",
         footer_caption=(
-            "Hrishikesh Panchang rules applied via the same engine as Life Prediction. "
-            "For remedies and technical chart details, see Synthesis and Evaluation tabs."
+            "Next: Tab 2 Focus reading for a short topic view · "
+            "Tab 5 for remedies · Tab 6 for dasha tables · "
+            "sidebar Timing Summary for a full-screen graph."
         ),
     )
 
 # ===========================================================================
-# FOCUS READING - short plain-language, intent-focused view
+# 2. FOCUS READING - short plain-language, intent-focused view
 # ===========================================================================
 with tab0:
+    _tab_banner(
+        "Tab 2 · Short answer",
+        "Focus reading",
+        f"A compact plain-language view for your selected focus: "
+        f"<b>{intent}</b>. No technical jargon.",
+    )
     reading = plain_language_reading(chart, intent)
 
     st.markdown(
@@ -430,8 +470,7 @@ with tab0:
     )
 
     st.caption(
-        f"This page explains, in plain language, what your chart suggests about "
-        f"{reading['intro']}. No astrology knowledge needed."
+        f"This tab explains what your chart suggests about {reading['intro']}."
     )
 
     st.markdown("#### In simple terms")
@@ -474,23 +513,30 @@ with tab0:
     )
 
     st.caption(
-        "Want the full guided report? Open the Your Report tab. "
-        "Technical chart detail is in Chart / Evaluation; remedies are in Synthesis."
+        "Want the full guided report? Open Tab 1 · Your Report. "
+        "Chart detail → Tab 3 · Evaluation → Tab 4 · Remedies → Tab 5."
     )
 
 # ===========================================================================
-# PHASE 1 - Chart construction & identification
+# 3. CHART - construction & identification
 # ===========================================================================
 with tab1:
+    _tab_banner(
+        "Tab 3 · See the kundli",
+        "Chart",
+        "Visual birth chart (South/North Indian, D-1 or D-9) and the planet table. "
+        "Change display options above the tabs.",
+    )
     left, right = st.columns([1, 1])
     with left:
+        st.markdown("#### Kundli diagram")
         svg = chart_svg(chart, style=style, varga=varga_key, size=460)
         components.html(
             f'<div style="display:flex;justify-content:center">{svg}</div>',
             height=480,
         )
     with right:
-        st.markdown("#### Planetary Positions")
+        st.markdown("#### Planetary positions")
         rows = []
         strengths = all_strengths(chart)
         for nm in ref.PLANETS:
@@ -514,16 +560,23 @@ with tab1:
             f"<b>Navamsha Lagna:</b> {chart.navamsha_lagna_sign}</div>",
             unsafe_allow_html=True,
         )
+    st.caption("Next: Tab 4 · Evaluation for strengths, Ashtakavarga, and house verdicts.")
 
 # ===========================================================================
-# PHASE 2 - Evaluation of indicators
+# 4. EVALUATION - strengths, houses, patterns
 # ===========================================================================
 with tab2:
+    _tab_banner(
+        "Tab 4 · Technical depth",
+        "Evaluation",
+        "How strong each planet is, Ashtakavarga opportunity scores, "
+        "house-by-house verdicts, and repeating patterns. Optional for advanced readers.",
+    )
     strengths = all_strengths(chart)
     foundation = chart_foundation_score(chart)
     nature = functional_nature(chart)
 
-    st.markdown("### Step 6 - Overall Foundation")
+    st.markdown("### A · Overall foundation")
     m1, m2, m3, m4 = st.columns(4)
     m1.markdown(f"<div class='card'><div class='metric-big'>{foundation['average_percent']}%</div>"
                 f"<div class='subtle'>avg dignity</div></div>", unsafe_allow_html=True)
@@ -534,7 +587,7 @@ with tab2:
     m4.markdown(f"<div class='card'><div class='metric-big'>{len(foundation['vargottama'])}</div>"
                 f"<div class='subtle'>vargottama</div></div>", unsafe_allow_html=True)
 
-    st.markdown("### Step 7 - Individual Planetary Strength")
+    st.markdown("### B · Planetary strength")
     prows = []
     for nm in ref.PLANETS:
         s = strengths[nm]
@@ -551,8 +604,7 @@ with tab2:
         })
     st.dataframe(prows, hide_index=True, use_container_width=True)
 
-    # --- Ashtakavarga (Sarvashtakavarga) ---------------------------------
-    st.markdown("### Sarvashtakavarga - the Math of Opportunity")
+    st.markdown("### C · Sarvashtakavarga (opportunity map)")
     sav = compute_sav(chart)
     st.caption(
         f"Total {sav['total']} bindus across 12 houses (average "
@@ -579,7 +631,8 @@ with tab2:
     with cc2:
         st.dataframe(sav_rows, hide_index=True, use_container_width=True, height=240)
 
-    st.markdown("### Steps 8-9 - House-by-House Judging")
+    st.markdown("### D · House-by-house verdicts")
+    st.caption(f"Houses tied to your focus ({intent}) open expanded.")
     reports = analyse_all_houses(chart)
     for h in range(1, 13):
         r = reports[h]
@@ -602,7 +655,7 @@ with tab2:
             for sgl in r.signals:
                 st.markdown(f"- {sgl}")
 
-    st.markdown("### Step 11 - Repeating Patterns")
+    st.markdown("### E · Repeating patterns")
     patterns = repeating_patterns(chart)
     if not patterns:
         st.info("No high-confidence repeating patterns detected.")
@@ -613,19 +666,28 @@ with tab2:
             f"({p['count']} agreeing indicators): {p['detail']}</div>",
             unsafe_allow_html=True,
         )
+    st.caption("Next: Tab 5 · Synthesis & remedies for written advice and Upaye.")
 
 # ===========================================================================
-# PHASE 3 - Synthesis & reporting
+# 5. SYNTHESIS & REMEDIES
 # ===========================================================================
 with tab3:
+    _tab_banner(
+        "Tab 5 · Advice & remedies",
+        "Synthesis & remedies",
+        "Written synthesis for your focus, then remedial measures (Upaye) under "
+        "the Do No Harm rule. Download Markdown / PDF here.",
+    )
     syn = synthesize(chart, intent)
-    st.markdown("### Step 12 - Synthesis & Recommendations")
+    st.markdown("### Written synthesis")
     for para in syn["paragraphs"]:
         st.markdown(f"<div class='card'>{para}</div>", unsafe_allow_html=True)
 
-    st.markdown("### Remedial Measures (Upaye)")
-    st.caption("Gated by the 'Do No Harm' rule - only functional benefics are strengthened "
-               "with gemstones; functional malefics are pacified with mantra/charity only.")
+    st.markdown("### Remedial measures (Upaye)")
+    st.caption(
+        "Only functional benefics are strengthened with gemstones; "
+        "functional malefics are pacified with mantra/charity only."
+    )
     remedies = recommend_remedies(chart)
     if not remedies:
         st.success("Functional benefics are reasonably strong; no urgent remedies indicated.")
@@ -642,7 +704,7 @@ with tab3:
             unsafe_allow_html=True,
         )
 
-    st.markdown("### Download Report")
+    st.markdown("### Download report")
     md = build_markdown(chart, intent)
     d1, d2 = st.columns(2)
     with d1:
@@ -658,15 +720,22 @@ with tab3:
         except Exception as e:
             st.caption(f"PDF unavailable: {e}")
 
-    with st.expander("Preview full report"):
+    with st.expander("Preview full technical report"):
         st.markdown(md)
+    st.caption("Next: Tab 6 · Timing & Transits for Mahadasha / Antardasha periods.")
 
 # ===========================================================================
-# TIMING & TRANSITS - Vimshottari Dasha + Sade Sati
+# 6. TIMING & TRANSITS
 # ===========================================================================
 with tab4:
+    _tab_banner(
+        "Tab 6 · When things unfold",
+        "Timing & Transits",
+        "Vimshottari Mahadasha / Antardasha timeline, impact graph, Sade Sati, "
+        "and short phase notes. For a full-screen view, also open Timing Summary in the sidebar.",
+    )
     nak = starting_nakshatra(chart)
-    st.markdown("### Vimshottari Dasha")
+    st.markdown("### Current dasha")
     st.caption(
         f"Birth Nakshatra: **{nak['nakshatra']}** (lord {nak['lord']}). "
         f"Balance of first Mahadasha at birth: {nak['balance_years']:.2f} years."
@@ -682,6 +751,19 @@ with tab4:
             unsafe_allow_html=True,
         )
 
+    from astro.timing_summary import build_timing_summary
+    from astro.timing_viz import render_timing_viz
+    from astro.chart_explain import build_chart_explain
+    from astro.explain_ui import render_chart_explain
+
+    timing_sum = build_timing_summary(chart, horizon_years=6)
+    st.markdown("### Impact graphs")
+    render_timing_viz(timing_sum, height=720)
+    with st.expander("Phase explanation (why periods behave this way)", expanded=False):
+        explain = build_chart_explain(chart, timing=timing_sum, horizon_years=6)
+        render_chart_explain(explain, theme="horoscope", show_summary=False, show_timing=True)
+
+    st.markdown("### Full Mahadasha table")
     drows = []
     for p in periods:
         running = "\u25b6 " if (maha and p.lord == maha.lord and p.start == maha.start) else ""
@@ -703,7 +785,7 @@ with tab4:
             } for a in maha.antardashas]
             st.dataframe(arows, hide_index=True, use_container_width=True)
 
-    st.markdown("### Gochara - Sade Sati")
+    st.markdown("### Gochara — Sade Sati")
     ss = sade_sati_status(chart)
     if ss["active"]:
         st.warning(
@@ -715,11 +797,18 @@ with tab4:
             f"Not currently in Sade Sati. Saturn transits {ss['saturn_sign']}; "
             f"natal Moon in {ss['moon_sign']}."
         )
+    st.caption("Optional close: Tab 7 · Witness — a contemplative Advaita reading of the same chart.")
 
 # ===========================================================================
-# WITNESS - Jyotish meets the Ashtavakra Gita (Advaita Vedanta)
+# 7. WITNESS
 # ===========================================================================
 with tab5:
+    _tab_banner(
+        "Tab 7 · Contemplative close",
+        "Witness",
+        "Jyotish meets the Ashtavakra Gita — each planet as actor in Maya, "
+        "and the same placement from the Witness (Drashta).",
+    )
     wr = wisdom.witness_reading(chart)
     st.markdown(
         f"""
